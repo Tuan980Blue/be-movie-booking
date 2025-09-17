@@ -9,6 +9,8 @@ public interface IUserRepository
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);
+    Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task UpdateAsync(User user, CancellationToken ct = default);
 }
 public class UserRepository : IUserRepository
 {
@@ -32,5 +34,16 @@ public class UserRepository : IUserRepository
     public async Task AddAsync(User user, CancellationToken ct = default)
     {
         await _db.Users.AddAsync(user, ct);
+    }
+
+    public Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return _db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
+    }
+
+    public Task UpdateAsync(User user, CancellationToken ct = default)
+    {
+        _db.Users.Update(user);
+        return Task.CompletedTask;
     }
 }

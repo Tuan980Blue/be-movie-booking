@@ -19,6 +19,7 @@ public class AuthController : ControllerBase
     public record RegisterRequest(string Email, string Password, string FullName);
     public record LoginRequest(string Email, string Password, string? DeviceId, string? UserAgent);
     public record RefreshRequest(string RefreshToken, string? DeviceId, string? UserAgent);
+    public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
     [HttpPost("register")]
     [AllowAnonymous]
@@ -65,6 +66,24 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+    {
+        var sub = User?.Claims?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+                  ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (sub == null) return Unauthorized();
+        try
+        {
+            await _auth.ChangePasswordAsync(Guid.Parse(sub), req.CurrentPassword, req.NewPassword);
+            return Ok();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+    }
+    
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()
