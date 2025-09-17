@@ -128,3 +128,4 @@ D:\Projects\CinemaBookingWeb\movie-booking\be-movie-booking\be-movie-booking\bin
 D:\Projects\CinemaBookingWeb\movie-booking\be-movie-booking\be-movie-booking\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 D:\Projects\CinemaBookingWeb\movie-booking\be-movie-booking\be-movie-booking\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
 D:\Projects\CinemaBookingWeb\movie-booking\be-movie-booking\be-movie-booking\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
+D:\Projects\CinemaBookingWeb\movie-booking\be-movie-booking\be-movie-booking\obj\Debug\net9.0\be-movie-booking.sourcelink.json

@@ -10,6 +10,7 @@ public interface IAuthService
     Task<(User user, string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> LoginAsync(string email, string password, string? deviceId, string? userAgent, string? ip);
     Task<(string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RefreshAsync(string refreshToken, string? deviceId, string? userAgent, string? ip);
     Task LogoutAsync(Guid userId);
+    Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
 }
 
 public class AuthService : IAuthService
@@ -74,6 +75,20 @@ public class AuthService : IAuthService
         return (access, accessExp, newRefresh, refreshExp);
     }
 
+    
+    public async Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+    {
+        var user = await _users.GetByIdAsync(userId) ?? throw new UnauthorizedAccessException();
+        if (!BCrypt.Net.BCrypt.Verify(currentPassword, user.PasswordHash)) throw new UnauthorizedAccessException();
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        await _users.UpdateAsync(user);
+
+        var activeTokens = await _refreshTokens.GetActiveByUserAsync(userId);
+        foreach (var t in activeTokens) t.RevokedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+    
     public async Task LogoutAsync(Guid userId)
     {
         var tokens = await _refreshTokens.GetActiveByUserAsync(userId);

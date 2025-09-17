@@ -1,0 +1,83 @@
+# --- .NET / C# build outputs ---
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+artifacts/
+bld/
+
+# Solution & msbuild caches
+*.cache
+*.ide
+*.sln.ide
+*.tlog
+
+# Binaries & symbols (never commit build outputs)
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.so
+*.dylib
+*.a
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+
+# Test results / coverage
+TestResult*/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+
+# Entity Framework tools (keep Migrations tracked)
+*.dbmdl
+
+# Rider / IntelliJ
+.idea/
+*.sln.DotSettings.user
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.psess
+*.vsp
+*.vspx
+
+# VS Code
+.vscode/
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Node (if present)
+node_modules/
+
+# Docker local overrides
+docker-compose.override.yml
+
+# Application specific (backend folder paths explicit)
+/be-movie-booking/bin/
+/be-movie-booking/obj/
+
