@@ -17,10 +17,10 @@ public class AuthService : IAuthService
 {
     private readonly MovieBookingDbContext _db;
     private readonly ITokenService _tokens;
-    private readonly IUserRepository _users;
+    private readonly IAuthRepository _users;
     private readonly IRefreshTokenRepository _refreshTokens;
 
-    public AuthService(MovieBookingDbContext db, ITokenService tokens, IUserRepository users, IRefreshTokenRepository refreshTokens)
+    public AuthService(MovieBookingDbContext db, ITokenService tokens, IAuthRepository users, IRefreshTokenRepository refreshTokens)
     {
         _db = db;
         _tokens = tokens;
