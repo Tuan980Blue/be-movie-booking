@@ -52,12 +52,12 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshRequest req)
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshRequest req)
     {
         try
         {
-            var result = await _auth.RefreshAsync(req.RefreshToken, req.DeviceId, req.UserAgent ?? Request.Headers["User-Agent"], HttpContext.Connection.RemoteIpAddress?.ToString());
+            var result = await _auth.RefreshTokenAsync(req.RefreshToken, req.DeviceId, req.UserAgent ?? Request.Headers["User-Agent"], HttpContext.Connection.RemoteIpAddress?.ToString());
             return Ok(new { accessToken = result.accessToken, accessTokenExpiresAt = result.accessExpires, refreshToken = result.refreshToken, refreshTokenExpiresAt = result.refreshExpires });
         }
         catch
