@@ -21,8 +21,8 @@ public class AuthController : ControllerBase
     public record RefreshRequest(string RefreshToken, string? DeviceId, string? UserAgent);
     public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
-    [HttpPost("register")]
     [AllowAnonymous]
+    [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
         try
@@ -36,8 +36,8 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("login")]
     [AllowAnonymous]
+    [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
         try
@@ -51,8 +51,8 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("refresh")]
     [AllowAnonymous]
+    [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest req)
     {
         try
@@ -66,8 +66,8 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("change-password")]
     [Authorize]
+    [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
     {
         var sub = User?.Claims?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
@@ -84,8 +84,8 @@ public class AuthController : ControllerBase
         }
     }
     
-    [HttpPost("logout")]
     [Authorize]
+    [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
         var sub = User?.Claims?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
