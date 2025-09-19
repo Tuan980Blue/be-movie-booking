@@ -8,7 +8,7 @@
       - "5183:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=movie_booking_db;Username=postgres;Password=postgres123
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=movie_booking_db;Username=postgres;Password=192831
     depends_on:
       - postgres
 
@@ -17,7 +17,7 @@
     environment:
       - POSTGRES_DB=movie_booking_db
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres123
+      - POSTGRES_PASSWORD=192831
     ports:
       - "5432:5432"
     volumes:

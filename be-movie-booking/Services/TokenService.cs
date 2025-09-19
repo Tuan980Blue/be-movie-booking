@@ -12,7 +12,7 @@ namespace be_movie_booking.Services;
 
 public interface ITokenService
 {
-    Task<(string accessToken, DateTime expiresAt)> CreateAccessTokenAsync(User user);
+    Task<(string accessToken, DateTime expiresAt)> CreateAccessTokenAsync(User user, List<string> roles);
     Task<(string refreshToken, string refreshTokenHash, DateTime expiresAt)> CreateRefreshTokenAsync(User user, string? deviceId, string? userAgent, string? ip);
     string ComputeSha256(string input);
 }
@@ -28,7 +28,7 @@ public class TokenService : ITokenService
         _db = db;
     }
 
-    public async Task<(string accessToken, DateTime expiresAt)> CreateAccessTokenAsync(User user)
+    public Task<(string accessToken, DateTime expiresAt)> CreateAccessTokenAsync(User user, List<string> roles)
     {
         var jwtSection = _config.GetSection("Jwt");
         var secret = jwtSection.GetValue<string>("Secret") ?? "dev_secret_change_me";
@@ -50,6 +50,12 @@ public class TokenService : ITokenService
             new(ClaimTypes.Name, user.FullName)
         };
 
+        // Add role claims from parameter (no database query needed!)
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
@@ -60,7 +66,7 @@ public class TokenService : ITokenService
         );
 
         var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-        return (jwt, expires);
+        return Task.FromResult((jwt, expires));
     }
 
     public async Task<(string refreshToken, string refreshTokenHash, DateTime expiresAt)> CreateRefreshTokenAsync(User user, string? deviceId, string? userAgent, string? ip)

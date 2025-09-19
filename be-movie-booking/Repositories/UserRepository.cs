@@ -8,6 +8,7 @@ public interface IUserRepository
 {
     Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
+    Task<User?> GetByEmailWithRolesAsync(string email, CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);
     Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task UpdateAsync(User user, CancellationToken ct = default);
@@ -29,6 +30,14 @@ public class UserRepository : IUserRepository
     public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
     {
         return _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+    }
+
+    public Task<User?> GetByEmailWithRolesAsync(string email, CancellationToken ct = default)
+    {
+        return _db.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Email == email, ct);
     }
 
     public async Task AddAsync(User user, CancellationToken ct = default)
