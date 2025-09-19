@@ -33,6 +33,9 @@ packages/
 *.nuget.targets
 project.lock.json
 project.fragment.lock.json
+project.assets.json
+project.nuget.cache
+project.packagespec.json
 
 # Test results / coverage
 TestResult*/
@@ -48,6 +51,8 @@ coverage/
 # Rider / IntelliJ
 .idea/
 *.sln.DotSettings.user
+rider.project.model.nuget.info
+rider.project.restore.info
 
 # Visual Studio
 .vs/
@@ -80,4 +85,29 @@ docker-compose.override.yml
 # Application specific (backend folder paths explicit)
 /be-movie-booking/bin/
 /be-movie-booking/obj/
+
+# Additional build artifacts
+*.deps.json
+*.runtimeconfig.json
+*.staticwebassets.endpoints.json
+*.AssemblyInfo.cs
+*.AssemblyInfoInputs.cache
+*.GeneratedMSBuildEditorConfig.editorconfig
+*.GlobalUsings.g.cs
+*.MvcApplicationPartsAssemblyInfo.cache
+*.MvcApplicationPartsAssemblyInfo.cs
+*.assets.cache
+*.AssemblyReference.cache
+*.CoreCompileInputs.cache
+*.FileListAbsolute.txt
+*.genruntimeconfig.cache
+*.Up2Date
+*.dswa.cache.json
+*.build.endpoints.json
+*.build.json
+*.build.json.cache
+*.csproj.EntityFrameworkCore.targets
+*.csproj.nuget.dgspec.json
+*.csproj.nuget.g.props
+*.csproj.nuget.g.targets
 
