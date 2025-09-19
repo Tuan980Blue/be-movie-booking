@@ -8,7 +8,7 @@ public interface IAuthService
 {
     Task<(User user, string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RegisterAsync(string email, string password, string fullName, string? userAgent, string? ip);
     Task<(User user, string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> LoginAsync(string email, string password, string? deviceId, string? userAgent, string? ip);
-    Task<(string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RefreshAsync(string refreshToken, string? deviceId, string? userAgent, string? ip);
+    Task<(string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RefreshTokenAsync(string refreshToken, string? deviceId, string? userAgent, string? ip);
     Task LogoutAsync(Guid userId);
     Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
 }
@@ -69,7 +69,7 @@ public class AuthService : IAuthService
         return (user, access, accessExp, refresh, refreshExp);
     }
 
-    public async Task<(string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RefreshAsync(string refreshToken, string? deviceId, string? userAgent, string? ip)
+    public async Task<(string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RefreshTokenAsync(string refreshToken, string? deviceId, string? userAgent, string? ip)
     {
         if (string.IsNullOrWhiteSpace(refreshToken)) throw new ArgumentException("Invalid refresh token");
         var hash = _tokens.ComputeSha256(refreshToken);
