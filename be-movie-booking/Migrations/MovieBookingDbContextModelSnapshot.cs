@@ -8,7 +8,7 @@ using be_movie_booking.Data;
 
 #nullable disable
 
-namespace be_movie_booking.Data.Migrations
+namespace be_movie_booking.Migrations
 {
     [DbContext(typeof(MovieBookingDbContext))]
     partial class MovieBookingDbContextModelSnapshot : ModelSnapshot
@@ -463,6 +463,23 @@ namespace be_movie_booking.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Name = "User"
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
+                            Name = "Manager"
+                        });
                 });
 
             modelBuilder.Entity("be_movie_booking.Models.Room", b =>

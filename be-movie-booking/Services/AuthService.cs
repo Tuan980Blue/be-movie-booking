@@ -41,19 +41,30 @@ public class AuthService : IAuthService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
         };
         await _users.AddAsync(user);
+        
+        // Assign default "User" role to new user
+        var defaultRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111"); // User role
+        var userRole = new UserRole
+        {
+            UserId = user.Id,
+            RoleId = defaultRoleId
+        };
+        _db.UserRoles.Add(userRole);
+        
         await _db.SaveChangesAsync();
 
-        var (access, accessExp) = await _tokens.CreateAccessTokenAsync(user);
+        var (access, accessExp) = _tokens.CreateAccessTokenAsync(user, new List<string> { "User" }).Result;
         var (refresh, _, refreshExp) = await _tokens.CreateRefreshTokenAsync(user, null, userAgent, ip);
         return (user, access, accessExp, refresh, refreshExp);
     }
 
     public async Task<(User user, string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> LoginAsync(string email, string password, string? deviceId, string? userAgent, string? ip)
     {
-        var user = await _users.GetByEmailAsync(email) ?? throw new UnauthorizedAccessException();
+        var user = await _users.GetByEmailWithRolesAsync(email) ?? throw new UnauthorizedAccessException();
         if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash)) throw new UnauthorizedAccessException();
 
-        var (access, accessExp) = await _tokens.CreateAccessTokenAsync(user);
+        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
+        var (access, accessExp) = _tokens.CreateAccessTokenAsync(user, roles).Result;
         var (refresh, _, refreshExp) = await _tokens.CreateRefreshTokenAsync(user, deviceId, userAgent, ip);
         return (user, access, accessExp, refresh, refreshExp);
     }
@@ -68,7 +79,8 @@ public class AuthService : IAuthService
         rt.RevokedAt = DateTime.UtcNow;
         rt.RevokedByIp = ip;
         var user = rt.User;
-        var (access, accessExp) = await _tokens.CreateAccessTokenAsync(user);
+        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
+        var (access, accessExp) = _tokens.CreateAccessTokenAsync(user, roles).Result;
         var (newRefresh, newHash, refreshExp) = await _tokens.CreateRefreshTokenAsync(user, deviceId ?? rt.DeviceId, userAgent ?? rt.UserAgent, ip);
         rt.ReplacedByTokenHash = newHash;
         await _db.SaveChangesAsync();

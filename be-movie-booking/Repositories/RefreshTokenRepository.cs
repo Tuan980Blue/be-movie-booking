@@ -21,7 +21,11 @@ public class RefreshTokenRepository : IRefreshTokenRepository
 
     public Task<RefreshToken?> GetByHashAsync(string tokenHash, CancellationToken ct = default)
     {
-        return _db.RefreshTokens.Include(r => r.User).FirstOrDefaultAsync(r => r.TokenHash == tokenHash, ct);
+        return _db.RefreshTokens
+            .Include(r => r.User)
+            .ThenInclude(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(r => r.TokenHash == tokenHash, ct);
     }
 
     public async Task AddAsync(RefreshToken token, CancellationToken ct = default)
