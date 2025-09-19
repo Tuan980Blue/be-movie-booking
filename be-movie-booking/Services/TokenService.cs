@@ -4,8 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using be_movie_booking.Data;
 using be_movie_booking.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace be_movie_booking.Services;
@@ -42,6 +40,7 @@ public class TokenService : ITokenService
         var now = DateTime.UtcNow;
         var expires = now.AddMinutes(accessMinutes);
 
+        // Claim là tập hợp các thông tin (dạng key–value) được nhúng vào trong JWT (JSON Web Token) để đại diện cho danh tính và quyền của người dùng
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
