@@ -58,8 +58,10 @@ builder.Services.AddAuthentication(options =>
 // Scoped: Tạo một instance cho mỗi HTTP request
 builder.Services.AddScoped<be_movie_booking.Services.ITokenService, be_movie_booking.Services.TokenService>();
 builder.Services.AddScoped<be_movie_booking.Services.IAuthService, be_movie_booking.Services.AuthService>();
+builder.Services.AddScoped<be_movie_booking.Services.IUserService, be_movie_booking.Services.UserService>();
 
 // Đăng ký các repository để truy cập database
+builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IRefreshTokenRepository, be_movie_booking.Repositories.RefreshTokenRepository>();
 
