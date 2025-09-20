@@ -60,10 +60,18 @@ builder.Services.AddScoped<be_movie_booking.Services.ITokenService, be_movie_boo
 builder.Services.AddScoped<be_movie_booking.Services.IAuthService, be_movie_booking.Services.AuthService>();
 builder.Services.AddScoped<be_movie_booking.Services.IUserService, be_movie_booking.Services.UserService>();
 
+// Movie và Genre services
+builder.Services.AddScoped<be_movie_booking.Services.IMovieService, be_movie_booking.Services.MovieService>();
+builder.Services.AddScoped<be_movie_booking.Services.IGenreService, be_movie_booking.Services.GenreService>();
+
 // Đăng ký các repository để truy cập database
 builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IRefreshTokenRepository, be_movie_booking.Repositories.RefreshTokenRepository>();
+
+// Movie và Genre repositories
+builder.Services.AddScoped<be_movie_booking.Repositories.IMovieRepository, be_movie_booking.Repositories.MovieRepository>();
+builder.Services.AddScoped<be_movie_booking.Repositories.IGenreRepository, be_movie_booking.Repositories.GenreRepository>();
 
 // Build ứng dụng từ builder
 var app = builder.Build();
