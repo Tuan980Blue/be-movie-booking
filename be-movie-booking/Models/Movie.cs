@@ -28,6 +28,8 @@ public class Movie
     public string? PosterUrl { get; set; }
     public string? BackdropUrl { get; set; }
     public MovieStatus Status { get; set; } = MovieStatus.Draft;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
     public ICollection<MovieGenre> MovieGenres { get; set; } = new List<MovieGenre>();
 }
