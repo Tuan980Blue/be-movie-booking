@@ -195,6 +195,9 @@ namespace be_movie_booking.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("TrailerUrl")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
