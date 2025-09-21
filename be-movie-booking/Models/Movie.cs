@@ -27,6 +27,7 @@ public class Movie
     public DateTime? ReleaseDate { get; set; }
     public string? PosterUrl { get; set; }
     public string? BackdropUrl { get; set; }
+    public string? TrailerUrl { get; set; }
     public MovieStatus Status { get; set; } = MovieStatus.Draft;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

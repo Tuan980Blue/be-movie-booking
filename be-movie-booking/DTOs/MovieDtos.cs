@@ -32,6 +32,9 @@ public class CreateMovieDto
     [Url(ErrorMessage = "URL backdrop không hợp lệ")]
     public string? BackdropUrl { get; set; }
 
+    [Url(ErrorMessage = "URL trailer không hợp lệ")]
+    public string? TrailerUrl { get; set; }
+
     [Required(ErrorMessage = "Danh sách thể loại là bắt buộc")]
     [MinLength(1, ErrorMessage = "Phim phải có ít nhất 1 thể loại")]
     public List<Guid> GenreIds { get; set; } = new();
@@ -66,6 +69,9 @@ public class UpdateMovieDto
 
     [Url(ErrorMessage = "URL backdrop không hợp lệ")]
     public string? BackdropUrl { get; set; }
+
+    [Url(ErrorMessage = "URL trailer không hợp lệ")]
+    public string? TrailerUrl { get; set; }
 
     [Required(ErrorMessage = "Danh sách thể loại là bắt buộc")]
     [MinLength(1, ErrorMessage = "Phim phải có ít nhất 1 thể loại")]
@@ -124,6 +130,7 @@ public class MovieReadDto
     public DateTime? ReleaseDate { get; set; }
     public string? PosterUrl { get; set; }
     public string? BackdropUrl { get; set; }
+    public string? TrailerUrl { get; set; }
     public string Status { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

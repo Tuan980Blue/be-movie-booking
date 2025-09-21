@@ -80,6 +80,7 @@ public class MovieService : IMovieService
             ReleaseDate = dto.ReleaseDate,
             PosterUrl = dto.PosterUrl,
             BackdropUrl = dto.BackdropUrl,
+            TrailerUrl = dto.TrailerUrl,
             Status = MovieStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
@@ -126,6 +127,7 @@ public class MovieService : IMovieService
         movie.ReleaseDate = dto.ReleaseDate;
         movie.PosterUrl = dto.PosterUrl;
         movie.BackdropUrl = dto.BackdropUrl;
+        movie.TrailerUrl = dto.TrailerUrl;
         movie.UpdatedAt = DateTime.UtcNow;
 
         // Update genres
@@ -203,6 +205,7 @@ public class MovieService : IMovieService
             ReleaseDate = movie.ReleaseDate,
             PosterUrl = movie.PosterUrl,
             BackdropUrl = movie.BackdropUrl,
+            TrailerUrl = movie.TrailerUrl,
             Status = movie.Status.ToString(),
             CreatedAt = movie.CreatedAt,
             UpdatedAt = movie.UpdatedAt,
