@@ -6,14 +6,6 @@ public enum EntityStatus
     Inactive = 2
 }
 
-public enum SeatType
-{
-    Standard = 1,
-    Vip = 2,
-    Couple = 3,
-    Accessible = 4
-}
-
 public class Cinema
 {
     public Guid Id { get; set; }
@@ -40,15 +32,4 @@ public class Room
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Seat> Seats { get; set; } = new List<Seat>();
-}
-
-public class Seat
-{
-    public Guid Id { get; set; }
-    public Guid RoomId { get; set; }
-    public Room Room { get; set; } = null!;
-    public string RowLabel { get; set; } = null!;
-    public int SeatNumber { get; set; }
-    public SeatType SeatType { get; set; } = SeatType.Standard;
-    public bool IsActive { get; set; } = true;
 }

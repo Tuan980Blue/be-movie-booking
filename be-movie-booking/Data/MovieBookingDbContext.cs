@@ -88,6 +88,29 @@ public class MovieBookingDbContext : DbContext
             e.HasKey(x => x.Id);
             e.HasOne(x => x.Room).WithMany(r => r.Seats).HasForeignKey(x => x.RoomId);
             e.HasIndex(x => new { x.RoomId, x.RowLabel, x.SeatNumber }).IsUnique();
+            
+            // Seat properties
+            e.Property(x => x.RowLabel).IsRequired().HasMaxLength(10);
+            e.Property(x => x.SeatNumber).IsRequired();
+            e.Property(x => x.SeatType).IsRequired();
+            e.Property(x => x.Status).IsRequired();
+            e.Property(x => x.IsActive).IsRequired();
+            
+            // Layout properties
+            e.Property(x => x.PositionX);
+            e.Property(x => x.PositionY);
+            
+            // Accessibility properties
+            e.Property(x => x.IsWheelchairAccessible).IsRequired();
+            e.Property(x => x.HasExtraLegroom).IsRequired();
+            e.Property(x => x.IsReclining).IsRequired();
+            e.Property(x => x.SpecialNotes).HasMaxLength(500);
+            
+            // Audit properties
+            e.Property(x => x.CreatedAt).IsRequired();
+            e.Property(x => x.UpdatedAt);
+            e.Property(x => x.CreatedBy);
+            e.Property(x => x.UpdatedBy);
         });
 
         // Movies / Genres
