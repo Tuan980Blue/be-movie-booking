@@ -26,15 +26,4 @@ public class Showtime
     public int BasePriceMinor { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    public ICollection<SeatTypePrice> SeatTypePrices { get; set; } = new List<SeatTypePrice>();
-}
-
-public class SeatTypePrice
-{
-    public Guid Id { get; set; }
-    public Guid ShowtimeId { get; set; }
-    public Showtime Showtime { get; set; } = null!;
-    public SeatType SeatType { get; set; }
-    public int PriceMinor { get; set; }
 }

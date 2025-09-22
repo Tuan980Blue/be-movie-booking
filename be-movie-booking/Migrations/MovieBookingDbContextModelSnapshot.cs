@@ -324,6 +324,45 @@ namespace be_movie_booking.Migrations
                     b.ToTable("PaymentEvents");
                 });
 
+            modelBuilder.Entity("be_movie_booking.Models.PriceRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CinemaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DayType")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PriceMinor")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SeatType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayType", "SeatType")
+                        .IsUnique()
+                        .HasFilter("\"CinemaId\" IS NULL");
+
+                    b.HasIndex("CinemaId", "DayType", "SeatType")
+                        .IsUnique();
+
+                    b.ToTable("PriceRules");
+                });
+
             modelBuilder.Entity("be_movie_booking.Models.Promotion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -590,29 +629,6 @@ namespace be_movie_booking.Migrations
                     b.ToTable("Seats");
                 });
 
-            modelBuilder.Entity("be_movie_booking.Models.SeatTypePrice", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("PriceMinor")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SeatType")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("ShowtimeId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ShowtimeId", "SeatType")
-                        .IsUnique();
-
-                    b.ToTable("SeatTypePrices");
-                });
-
             modelBuilder.Entity("be_movie_booking.Models.Showtime", b =>
                 {
                     b.Property<Guid>("Id")
@@ -842,6 +858,15 @@ namespace be_movie_booking.Migrations
                     b.Navigation("Payment");
                 });
 
+            modelBuilder.Entity("be_movie_booking.Models.PriceRule", b =>
+                {
+                    b.HasOne("be_movie_booking.Models.Cinema", "Cinema")
+                        .WithMany()
+                        .HasForeignKey("CinemaId");
+
+                    b.Navigation("Cinema");
+                });
+
             modelBuilder.Entity("be_movie_booking.Models.PromotionUsage", b =>
                 {
                     b.HasOne("be_movie_booking.Models.Booking", "Booking")
@@ -898,17 +923,6 @@ namespace be_movie_booking.Migrations
                         .IsRequired();
 
                     b.Navigation("Room");
-                });
-
-            modelBuilder.Entity("be_movie_booking.Models.SeatTypePrice", b =>
-                {
-                    b.HasOne("be_movie_booking.Models.Showtime", "Showtime")
-                        .WithMany("SeatTypePrices")
-                        .HasForeignKey("ShowtimeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Showtime");
                 });
 
             modelBuilder.Entity("be_movie_booking.Models.Showtime", b =>
@@ -1011,11 +1025,6 @@ namespace be_movie_booking.Migrations
             modelBuilder.Entity("be_movie_booking.Models.Room", b =>
                 {
                     b.Navigation("Seats");
-                });
-
-            modelBuilder.Entity("be_movie_booking.Models.Showtime", b =>
-                {
-                    b.Navigation("SeatTypePrices");
                 });
 
             modelBuilder.Entity("be_movie_booking.Models.User", b =>

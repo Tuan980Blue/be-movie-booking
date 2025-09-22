@@ -69,6 +69,10 @@ builder.Services.AddScoped<be_movie_booking.Services.ICinemaService, be_movie_bo
 builder.Services.AddScoped<be_movie_booking.Services.IRoomService, be_movie_booking.Services.RoomService>();
 builder.Services.AddScoped<be_movie_booking.Services.ISeatService, be_movie_booking.Services.SeatService>();
 
+// PriceRule services
+builder.Services.AddScoped<be_movie_booking.Services.IPriceRuleService, be_movie_booking.Services.PriceRuleService>();
+builder.Services.AddScoped<be_movie_booking.Services.IPricingService, be_movie_booking.Services.PricingService>();
+
 // Đăng ký các repository để truy cập database
 builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
@@ -82,6 +86,10 @@ builder.Services.AddScoped<be_movie_booking.Repositories.IGenreRepository, be_mo
 builder.Services.AddScoped<be_movie_booking.Repositories.ICinemaRepository, be_movie_booking.Repositories.CinemaRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IRoomRepository, be_movie_booking.Repositories.RoomRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.ISeatRepository, be_movie_booking.Repositories.SeatRepository>();
+
+// PriceRule repository
+builder.Services.AddScoped<be_movie_booking.Repositories.IPriceRuleRepository, be_movie_booking.Repositories.PriceRuleRepository>();
+
 
 // Build ứng dụng từ builder
 var app = builder.Build();

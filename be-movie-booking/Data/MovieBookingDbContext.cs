@@ -22,7 +22,7 @@ public class MovieBookingDbContext : DbContext
     public DbSet<MovieGenre> MovieGenres => Set<MovieGenre>();
 
     public DbSet<Showtime> Showtimes => Set<Showtime>();
-    public DbSet<SeatTypePrice> SeatTypePrices => Set<SeatTypePrice>();
+    public DbSet<PriceRule> PriceRules => Set<PriceRule>();
 
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<BookingItem> BookingItems => Set<BookingItem>();
@@ -140,11 +140,16 @@ public class MovieBookingDbContext : DbContext
             e.HasIndex(x => new { x.RoomId, x.StartUtc });
             e.HasIndex(x => new { x.MovieId, x.StartUtc });
         });
-        modelBuilder.Entity<SeatTypePrice>(e =>
+        modelBuilder.Entity<PriceRule>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasOne(x => x.Showtime).WithMany(s => s.SeatTypePrices).HasForeignKey(x => x.ShowtimeId);
-            e.HasIndex(x => new { x.ShowtimeId, x.SeatType }).IsUnique();
+            e.HasOne(x => x.Cinema).WithMany().HasForeignKey(x => x.CinemaId);
+            e.HasIndex(x => new { x.CinemaId, x.DayType, x.SeatType }).IsUnique();
+            // Đảm bảo Global (CinemaId IS NULL) chỉ có 1 bản ghi cho mỗi (DayType, SeatType)
+            e.HasIndex(x => new { x.DayType, x.SeatType })
+                .IsUnique()
+                .HasFilter("\"CinemaId\" IS NULL");
+            e.Property(x => x.PriceMinor).IsRequired();
         });
 
         // Bookings
