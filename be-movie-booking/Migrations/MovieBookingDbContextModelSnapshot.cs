@@ -531,21 +531,56 @@ namespace be_movie_booking.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("HasExtraLegroom")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsReclining")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsWheelchairAccessible")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("PositionX")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PositionY")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("RoomId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("RowLabel")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<int>("SeatNumber")
                         .HasColumnType("integer");
 
                     b.Property<int>("SeatType")
                         .HasColumnType("integer");
+
+                    b.Property<string>("SpecialNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
