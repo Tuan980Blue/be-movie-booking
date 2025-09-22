@@ -54,9 +54,17 @@ builder.Services.AddAuthentication(options =>
 
 // ===== ĐĂNG KÝ SERVICES VÀ REPOSITORIES =====
 
+// Ghi chú về DI (Dependency Injection) và AddScoped:
+// - DI Container sẽ tạo và "bơm" (inject) các đối tượng bạn yêu cầu qua interface.
+// - AddScoped: Mỗi HTTP request sẽ nhận 1 instance MỚI cho mỗi service/repository đã đăng ký.
+//   + Trong CÙNG 1 request: tất cả nơi cần cùng service sẽ dùng CHUNG 1 instance.
+//   + Sang request KHÁC: tạo instance MỚI (không dùng lại của request trước).
+// - Vì DbContext là Scoped, các Service/Repository phụ thuộc DbContext cũng nên Scoped để khớp vòng đời.
+// - Lợi ích: quản lý tài nguyên an toàn theo request, dễ test, ít coupling (phụ thuộc abstraction/interface).
+
 // Đăng ký các service với dependency injection
 // Scoped: Tạo một instance cho mỗi HTTP request
-builder.Services.AddScoped<be_movie_booking.Services.ITokenService, be_movie_booking.Services.TokenService>();
+builder.Services.AddScoped<be_movie_booking.Services.ITokenService, be_movie_booking.Services.TokenService>(); // 1 request -> 1 TokenService
 builder.Services.AddScoped<be_movie_booking.Services.IAuthService, be_movie_booking.Services.AuthService>();
 builder.Services.AddScoped<be_movie_booking.Services.IUserService, be_movie_booking.Services.UserService>();
 
@@ -74,7 +82,7 @@ builder.Services.AddScoped<be_movie_booking.Services.IPriceRuleService, be_movie
 builder.Services.AddScoped<be_movie_booking.Services.IPricingService, be_movie_booking.Services.PricingService>();
 
 // Đăng ký các repository để truy cập database
-builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
+builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();   // Repo cũng Scoped để dùng chung DbContext trong 1 request
 builder.Services.AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
 builder.Services.AddScoped<be_movie_booking.Repositories.IRefreshTokenRepository, be_movie_booking.Repositories.RefreshTokenRepository>();
 
