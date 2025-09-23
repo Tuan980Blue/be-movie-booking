@@ -143,16 +143,22 @@ public class CreateSeatLayoutDto
     [Required(ErrorMessage = "Loại ghế mặc định là bắt buộc")]
     public string DefaultSeatType { get; set; } = "Standard";
 
-    public bool SkipMiddleAisle { get; set; } = true;
-
-    [Range(1, 50, ErrorMessage = "Vị trí lối đi giữa phải từ 1 đến 50")]
-    public int? MiddleAislePosition { get; set; }
+    // Middle aisle removed
 
     // Layout properties
     public int? StartPositionX { get; set; } = 0;
     public int? StartPositionY { get; set; } = 0;
     public int? SeatSpacingX { get; set; } = 50;
     public int? SeatSpacingY { get; set; } = 50;
+
+    // Rows that should be generated entirely as Couple seats (pairs)
+    public List<string>? CoupleRows { get; set; } = new();
+
+    // Vertical spacing between two seats in a couple (pixels)
+    public int? CoupleSpacingY { get; set; } = 100; // legacy, unused in horizontal layout
+
+    // Horizontal spacing between two seats in a couple (pixels)
+    public int? CoupleSpacingX { get; set; } = 100;
 }
 
 /// <summary>
@@ -174,8 +180,6 @@ public class SeatRowDto
 {
     public string RowLabel { get; set; } = null!;
     public List<SeatDto> Seats { get; set; } = new();
-    public bool HasAisle { get; set; } = false;
-    public int? AislePosition { get; set; }
 }
 
 /// <summary>

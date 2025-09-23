@@ -120,30 +120,62 @@ public class SeatService : ISeatService
         var positionX = dto.StartPositionX ?? 0;
         var positionY = dto.StartPositionY ?? 0;
 
+        // Relaxed validation: allow odd counts by flooring pairs; with aisle, compute pairs per side using floor(left/2), floor(right/2)
+
         for (int row = 0; row < dto.Rows; row++)
         {
+            var isCoupleRow = dto.CoupleRows != null && dto.CoupleRows.Contains(currentRowLabel);
             for (int seatNum = 1; seatNum <= dto.SeatsPerRow; seatNum++)
             {
-                // Skip middle aisle if configured
-                if (dto.SkipMiddleAisle && dto.MiddleAislePosition.HasValue && seatNum == dto.MiddleAislePosition.Value)
+                if (!isCoupleRow)
                 {
-                    continue;
+                    // Normal seat
+                    var seat = new Seat
+                    {
+                        Id = Guid.NewGuid(),
+                        RoomId = roomId,
+                        RowLabel = currentRowLabel,
+                        SeatNumber = seatNum,
+                        SeatType = seatType,
+                        IsActive = true,
+                        PositionX = positionX + (seatNum - 1) * (dto.SeatSpacingX ?? 50),
+                        PositionY = positionY + row * (dto.SeatSpacingY ?? 50),
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    seats.Add(seat);
                 }
-
-                var seat = new Seat
+                else
                 {
-                    Id = Guid.NewGuid(),
-                    RoomId = roomId,
-                    RowLabel = currentRowLabel,
-                    SeatNumber = seatNum,
-                    SeatType = seatType,
-                    IsActive = true,
-                    PositionX = positionX + (seatNum - 1) * (dto.SeatSpacingX ?? 50),
-                    PositionY = positionY + row * (dto.SeatSpacingY ?? 50),
-                    CreatedAt = DateTime.UtcNow
-                };
+                    // Couple row: create one seat per couple, PositionX increments by spacing per couple
+                    var spacing = dto.SeatSpacingX ?? 50;
 
-                seats.Add(seat);
+                    // We will drive creation by a separate pair index; reuse seatNum loop only to keep structure
+                    int pairIndex = 1;
+                    int totalPairs = dto.SeatsPerRow / 2;
+                    for (int p = 1; p <= totalPairs; p++)
+                    {
+                        var baseX = positionX + (p - 1) * spacing;
+                        var baseY = positionY + row * (dto.SeatSpacingY ?? 50);
+
+                        // one representative seat per couple
+                        seats.Add(new Seat
+                        {
+                            Id = Guid.NewGuid(),
+                            RoomId = roomId,
+                            RowLabel = currentRowLabel,
+                            SeatNumber = p,
+                            SeatType = SeatType.Couple,
+                            IsActive = true,
+                            PositionX = baseX,
+                            PositionY = baseY,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+
+                    // we've fully handled the row; break inner loop
+                    break;
+                }
             }
 
             // Move to next row label
