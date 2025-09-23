@@ -93,17 +93,13 @@ public class MovieBookingDbContext : DbContext
             e.Property(x => x.RowLabel).IsRequired().HasMaxLength(10);
             e.Property(x => x.SeatNumber).IsRequired();
             e.Property(x => x.SeatType).IsRequired();
-            e.Property(x => x.Status).IsRequired();
             e.Property(x => x.IsActive).IsRequired();
             
             // Layout properties
             e.Property(x => x.PositionX);
             e.Property(x => x.PositionY);
             
-            // Accessibility properties
-            e.Property(x => x.IsWheelchairAccessible).IsRequired();
-            e.Property(x => x.HasExtraLegroom).IsRequired();
-            e.Property(x => x.IsReclining).IsRequired();
+            // Special notes
             e.Property(x => x.SpecialNotes).HasMaxLength(500);
             
             // Audit properties

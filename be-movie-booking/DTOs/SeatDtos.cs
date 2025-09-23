@@ -9,22 +9,14 @@ public class SeatReadDto
 {
     public Guid Id { get; set; }
     public Guid RoomId { get; set; }
-    public string RoomName { get; set; } = null!;
-    public string CinemaName { get; set; } = null!;
     public string RowLabel { get; set; } = null!;
     public int SeatNumber { get; set; }
     public string SeatType { get; set; } = null!;
-    public string Status { get; set; } = null!;
     public bool IsActive { get; set; }
     
     // Layout information
     public int? PositionX { get; set; }
     public int? PositionY { get; set; }
-    
-    // Accessibility & Special features
-    public bool IsWheelchairAccessible { get; set; }
-    public bool HasExtraLegroom { get; set; }
-    public bool IsReclining { get; set; }
     public string? SpecialNotes { get; set; }
     
     // Audit information
@@ -41,11 +33,13 @@ public class SeatListDto
     public string RowLabel { get; set; } = null!;
     public int SeatNumber { get; set; }
     public string SeatType { get; set; } = null!;
-    public string Status { get; set; } = null!;
     public bool IsActive { get; set; }
-    public bool IsWheelchairAccessible { get; set; }
-    public bool HasExtraLegroom { get; set; }
-    public bool IsReclining { get; set; }
+    
+    public int? PositionX { get; set; }
+    
+    public int? PositionY { get; set; }
+    
+    public string? SpecialNotes { get; set; }
 }
 
 /// <summary>
@@ -64,9 +58,6 @@ public class CreateSeatDto
     [Required(ErrorMessage = "Loại ghế là bắt buộc")]
     public string SeatType { get; set; } = null!;
 
-    [Required(ErrorMessage = "Trạng thái ghế là bắt buộc")]
-    public string Status { get; set; } = null!;
-
     public bool IsActive { get; set; } = true;
 
     // Layout properties
@@ -75,11 +66,6 @@ public class CreateSeatDto
 
     [Range(0, 1000, ErrorMessage = "Tọa độ Y phải từ 0 đến 1000")]
     public int? PositionY { get; set; }
-
-    // Accessibility & Special features
-    public bool IsWheelchairAccessible { get; set; } = false;
-    public bool HasExtraLegroom { get; set; } = false;
-    public bool IsReclining { get; set; } = false;
 
     [StringLength(500, ErrorMessage = "Ghi chú đặc biệt không được vượt quá 500 ký tự")]
     public string? SpecialNotes { get; set; }
@@ -101,9 +87,6 @@ public class UpdateSeatDto
     [Required(ErrorMessage = "Loại ghế là bắt buộc")]
     public string SeatType { get; set; } = null!;
 
-    [Required(ErrorMessage = "Trạng thái ghế là bắt buộc")]
-    public string Status { get; set; } = null!;
-
     public bool IsActive { get; set; }
 
     // Layout properties
@@ -112,23 +95,9 @@ public class UpdateSeatDto
 
     [Range(0, 1000, ErrorMessage = "Tọa độ Y phải từ 0 đến 1000")]
     public int? PositionY { get; set; }
-
-    // Accessibility & Special features
-    public bool IsWheelchairAccessible { get; set; }
-    public bool HasExtraLegroom { get; set; }
-    public bool IsReclining { get; set; }
-
+    
     [StringLength(500, ErrorMessage = "Ghi chú đặc biệt không được vượt quá 500 ký tự")]
     public string? SpecialNotes { get; set; }
-}
-
-/// <summary>
-/// DTO để thay đổi trạng thái ghế ngồi
-/// </summary>
-public class ChangeSeatStatusDto
-{
-    [Required(ErrorMessage = "Trạng thái là bắt buộc")]
-    public string Status { get; set; } = null!;
 }
 
 /// <summary>
@@ -143,11 +112,7 @@ public class SeatSearchDto
     public int? SeatNumber { get; set; }
 
     public string? SeatType { get; set; }
-    public string? Status { get; set; }
     public bool? IsActive { get; set; }
-    public bool? IsWheelchairAccessible { get; set; }
-    public bool? HasExtraLegroom { get; set; }
-    public bool? IsReclining { get; set; }
 
     [Range(1, 100, ErrorMessage = "Số trang phải từ 1 đến 100")]
     public int Page { get; set; } = 1;
@@ -222,13 +187,9 @@ public class SeatDto
     public string RowLabel { get; set; } = null!;
     public int SeatNumber { get; set; }
     public string SeatType { get; set; } = null!;
-    public string Status { get; set; } = null!;
     public bool IsActive { get; set; }
     public int? PositionX { get; set; }
     public int? PositionY { get; set; }
-    public bool IsWheelchairAccessible { get; set; }
-    public bool HasExtraLegroom { get; set; }
-    public bool IsReclining { get; set; }
     public string? SpecialNotes { get; set; }
 }
 
@@ -249,13 +210,6 @@ public class SeatTypeInfoDto
 public class SeatStatsDto
 {
     public int TotalSeats { get; set; }
-    public int AvailableSeats { get; set; }
-    public int OccupiedSeats { get; set; }
-    public int MaintenanceSeats { get; set; }
-    public int DisabledSeats { get; set; }
+    public int ActiveSeats { get; set; }
     public Dictionary<string, int> SeatsByType { get; set; } = new();
-    public double OccupancyRate { get; set; }
-    public int WheelchairAccessibleSeats { get; set; }
-    public int ExtraLegroomSeats { get; set; }
-    public int RecliningSeats { get; set; }
 }
