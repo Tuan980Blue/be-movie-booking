@@ -43,9 +43,9 @@ public class TokenService : ITokenService
         // Claim là tập hợp các thông tin (dạng key–value) được nhúng vào trong JWT (JSON Web Token) để đại diện cho danh tính và quyền của người dùng
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // Subject: định danh duy nhất của người dùng
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // JWT ID: định danh duy nhất cho token này
             new(ClaimTypes.Name, user.FullName)
         };
 

@@ -22,6 +22,7 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<MovieBookingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
 // ===== CẤU HÌNH JWT AUTHENTICATION =====
 
 // Lấy cấu hình JWT từ appsettings.json
@@ -30,27 +31,27 @@ var jwtSecret = jwtSection.GetValue<string>("Secret") ?? "dev_secret_change_me";
 var issuer = jwtSection.GetValue<string>("Issuer") ?? "be-movie-booking";         // Người phát hành token
 var audience = jwtSection.GetValue<string>("Audience") ?? "be-movie-booking-client"; // Đối tượng sử dụng token
 
-// Cấu hình Authentication với JWT Bearer
+// Cấu hình Authentication với JWT Bearer (ứng dụng sẽ xác thực Bearer Token)
 builder.Services.AddAuthentication(options =>
 {
     // Đặt JWT Bearer làm scheme mặc định cho authentication và challenge
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
-{
-    // Cấu hình các tham số validation cho JWT token
-    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
     {
-        ValidateIssuer = true,           // Kiểm tra issuer có đúng không
-        ValidateAudience = true,         // Kiểm tra audience có đúng không
-        ValidateLifetime = true,         // Kiểm tra token có hết hạn không
-        ValidateIssuerSigningKey = true, // Kiểm tra chữ ký của token
-        ValidIssuer = issuer,            // Issuer hợp lệ
-        ValidAudience = audience,        // Audience hợp lệ
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)), // Key để verify chữ ký
-        ClockSkew = TimeSpan.FromSeconds(30) // Cho phép sai lệch thời gian 30 giây
-    };
-});
+        // Cấu hình các tham số validation cho JWT token
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuer = true,           // Kiểm tra issuer có đúng không
+            ValidateAudience = true,         // Kiểm tra audience có đúng không
+            ValidateLifetime = true,         // Kiểm tra token có hết hạn không
+            ValidateIssuerSigningKey = true, // Kiểm tra chữ ký của token
+            ValidIssuer = issuer,            // Issuer hợp lệ
+            ValidAudience = audience,        // Audience hợp lệ
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)), // Key để verify chữ ký
+            ClockSkew = TimeSpan.FromSeconds(30) // Cho phép sai lệch thời gian 30 giây
+        };
+    });
 
 // ===== ĐĂNG KÝ SERVICES VÀ REPOSITORIES =====
 
@@ -114,6 +115,11 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Middleware xác thực - phải được đặt trước UseAuthorization
+// Khi request đến, Authentication middleware (được thêm bằng app.UseAuthentication()) sẽ:
+// Tìm header Authorization.
+// Kiểm tra xem có dạng Bearer <token> hay không.
+// Nếu có, nó sẽ giải mã và xác thực JWT (chữ ký, hạn dùng…).
+// Nếu hợp lệ, nó tạo một ClaimsPrincipal (chứa các Claims) và gắn vào HttpContext.User.
 app.UseAuthentication();
 
 // Middleware phân quyền - kiểm tra quyền truy cập
