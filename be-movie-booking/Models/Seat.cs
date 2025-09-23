@@ -12,17 +12,6 @@ public enum SeatType
 }
 
 /// <summary>
-/// Trạng thái ghế ngồi
-/// </summary>
-public enum SeatStatus
-{
-    Available = 1,     // Có thể đặt
-    Occupied = 2,       // Đã được đặt
-    Maintenance = 3,    // Đang bảo trì
-    Disabled = 4        // Tạm ngưng sử dụng
-}
-
-/// <summary>
 /// Model ghế ngồi trong phòng chiếu
 /// </summary>
 public class Seat
@@ -41,13 +30,7 @@ public class Seat
     
     // Seat properties
     public SeatType SeatType { get; set; } = SeatType.Standard;
-    public SeatStatus Status { get; set; } = SeatStatus.Available;
     public bool IsActive { get; set; } = true;
-    
-    // Accessibility & Special features
-    public bool IsWheelchairAccessible { get; set; } = false;
-    public bool HasExtraLegroom { get; set; } = false;
-    public bool IsReclining { get; set; } = false;
     public string? SpecialNotes { get; set; }             // Ghi chú đặc biệt
     
     // Audit fields

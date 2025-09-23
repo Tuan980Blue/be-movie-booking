@@ -17,7 +17,6 @@ public interface ISeatService
     Task<SeatReadDto?> UpdateAsync(Guid id, UpdateSeatDto dto, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<bool> DeleteByRoomAsync(Guid roomId, CancellationToken ct = default);
-    Task<SeatReadDto?> ChangeStatusAsync(Guid id, ChangeSeatStatusDto dto, CancellationToken ct = default);
     Task<SeatStatsDto> GetStatsAsync(Guid roomId, CancellationToken ct = default);
     Task<List<SeatReadDto>> GetAvailableSeatsAsync(Guid roomId, CancellationToken ct = default);
     Task<List<SeatReadDto>> GetSeatsByTypeAsync(Guid roomId, string seatType, CancellationToken ct = default);
@@ -83,11 +82,6 @@ public class SeatService : ISeatService
             throw new ArgumentException("Invalid seat type", nameof(dto.SeatType));
         }
 
-        if (!Enum.TryParse<SeatStatus>(dto.Status, out var status))
-        {
-            throw new ArgumentException("Invalid seat status", nameof(dto.Status));
-        }
-
         var seat = new Seat
         {
             Id = Guid.NewGuid(),
@@ -95,13 +89,9 @@ public class SeatService : ISeatService
             RowLabel = dto.RowLabel,
             SeatNumber = dto.SeatNumber,
             SeatType = seatType,
-            Status = status,
             IsActive = dto.IsActive,
             PositionX = dto.PositionX,
             PositionY = dto.PositionY,
-            IsWheelchairAccessible = dto.IsWheelchairAccessible,
-            HasExtraLegroom = dto.HasExtraLegroom,
-            IsReclining = dto.IsReclining,
             SpecialNotes = dto.SpecialNotes,
             CreatedAt = DateTime.UtcNow
         };
@@ -147,13 +137,9 @@ public class SeatService : ISeatService
                     RowLabel = currentRowLabel,
                     SeatNumber = seatNum,
                     SeatType = seatType,
-                    Status = SeatStatus.Available,
                     IsActive = true,
                     PositionX = positionX + (seatNum - 1) * (dto.SeatSpacingX ?? 50),
                     PositionY = positionY + row * (dto.SeatSpacingY ?? 50),
-                    IsWheelchairAccessible = false,
-                    HasExtraLegroom = false,
-                    IsReclining = false,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -179,28 +165,16 @@ public class SeatService : ISeatService
             throw new InvalidOperationException($"Seat {dto.RowLabel}{dto.SeatNumber} already exists in this room");
         }
 
-        // Parse enums
-        if (!Enum.TryParse<SeatType>(dto.SeatType, out var seatType))
-        {
-            throw new ArgumentException("Invalid seat type", nameof(dto.SeatType));
-        }
-
-        if (!Enum.TryParse<SeatStatus>(dto.Status, out var status))
-        {
-            throw new ArgumentException("Invalid seat status", nameof(dto.Status));
-        }
-
-        // Update seat properties
+        // Update editable fields
         seat.RowLabel = dto.RowLabel;
         seat.SeatNumber = dto.SeatNumber;
-        seat.SeatType = seatType;
-        seat.Status = status;
+        if (Enum.TryParse<SeatType>(dto.SeatType, out var parsedType))
+        {
+            seat.SeatType = parsedType;
+        }
         seat.IsActive = dto.IsActive;
         seat.PositionX = dto.PositionX;
         seat.PositionY = dto.PositionY;
-        seat.IsWheelchairAccessible = dto.IsWheelchairAccessible;
-        seat.HasExtraLegroom = dto.HasExtraLegroom;
-        seat.IsReclining = dto.IsReclining;
         seat.SpecialNotes = dto.SpecialNotes;
         seat.UpdatedAt = DateTime.UtcNow;
 
@@ -216,23 +190,6 @@ public class SeatService : ISeatService
     public async Task<bool> DeleteByRoomAsync(Guid roomId, CancellationToken ct = default)
     {
         return await _seatRepository.DeleteByRoomAsync(roomId, ct);
-    }
-
-    public async Task<SeatReadDto?> ChangeStatusAsync(Guid id, ChangeSeatStatusDto dto, CancellationToken ct = default)
-    {
-        var seat = await _seatRepository.GetByIdAsync(id, ct);
-        if (seat == null) return null;
-
-        if (!Enum.TryParse<SeatStatus>(dto.Status, out var status))
-        {
-            throw new ArgumentException("Invalid seat status", nameof(dto.Status));
-        }
-
-        seat.Status = status;
-        seat.UpdatedAt = DateTime.UtcNow;
-
-        var updatedSeat = await _seatRepository.UpdateAsync(seat, ct);
-        return MapToReadDto(updatedSeat);
     }
 
     public async Task<SeatStatsDto> GetStatsAsync(Guid roomId, CancellationToken ct = default)
@@ -265,18 +222,12 @@ public class SeatService : ISeatService
         {
             Id = seat.Id,
             RoomId = seat.RoomId,
-            RoomName = seat.Room?.Name ?? "",
-            CinemaName = seat.Room?.Cinema?.Name ?? "",
             RowLabel = seat.RowLabel,
             SeatNumber = seat.SeatNumber,
             SeatType = seat.SeatType.ToString(),
-            Status = seat.Status.ToString(),
             IsActive = seat.IsActive,
             PositionX = seat.PositionX,
             PositionY = seat.PositionY,
-            IsWheelchairAccessible = seat.IsWheelchairAccessible,
-            HasExtraLegroom = seat.HasExtraLegroom,
-            IsReclining = seat.IsReclining,
             SpecialNotes = seat.SpecialNotes,
             CreatedAt = seat.CreatedAt,
             UpdatedAt = seat.UpdatedAt
@@ -291,11 +242,7 @@ public class SeatService : ISeatService
             RowLabel = seat.RowLabel,
             SeatNumber = seat.SeatNumber,
             SeatType = seat.SeatType.ToString(),
-            Status = seat.Status.ToString(),
             IsActive = seat.IsActive,
-            IsWheelchairAccessible = seat.IsWheelchairAccessible,
-            HasExtraLegroom = seat.HasExtraLegroom,
-            IsReclining = seat.IsReclining
         };
     }
 

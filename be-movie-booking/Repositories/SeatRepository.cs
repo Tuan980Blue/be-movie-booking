@@ -77,32 +77,9 @@ public class SeatRepository : ISeatRepository
             }
         }
 
-        if (!string.IsNullOrEmpty(searchDto.Status))
-        {
-            if (Enum.TryParse<SeatStatus>(searchDto.Status, out var status))
-            {
-                query = query.Where(x => x.Status == status);
-            }
-        }
-
         if (searchDto.IsActive.HasValue)
         {
             query = query.Where(x => x.IsActive == searchDto.IsActive.Value);
-        }
-
-        if (searchDto.IsWheelchairAccessible.HasValue)
-        {
-            query = query.Where(x => x.IsWheelchairAccessible == searchDto.IsWheelchairAccessible.Value);
-        }
-
-        if (searchDto.HasExtraLegroom.HasValue)
-        {
-            query = query.Where(x => x.HasExtraLegroom == searchDto.HasExtraLegroom.Value);
-        }
-
-        if (searchDto.IsReclining.HasValue)
-        {
-            query = query.Where(x => x.IsReclining == searchDto.IsReclining.Value);
         }
 
         // Apply sorting
@@ -117,9 +94,6 @@ public class SeatRepository : ISeatRepository
             "seattype" => searchDto.SortDirection.ToLower() == "desc"
                 ? query.OrderByDescending(x => x.SeatType)
                 : query.OrderBy(x => x.SeatType),
-            "status" => searchDto.SortDirection.ToLower() == "desc"
-                ? query.OrderByDescending(x => x.Status)
-                : query.OrderBy(x => x.Status),
             "createdat" => searchDto.SortDirection.ToLower() == "desc"
                 ? query.OrderByDescending(x => x.CreatedAt)
                 : query.OrderBy(x => x.CreatedAt),
@@ -153,32 +127,9 @@ public class SeatRepository : ISeatRepository
             }
         }
 
-        if (!string.IsNullOrEmpty(searchDto.Status))
-        {
-            if (Enum.TryParse<SeatStatus>(searchDto.Status, out var status))
-            {
-                query = query.Where(x => x.Status == status);
-            }
-        }
-
         if (searchDto.IsActive.HasValue)
         {
             query = query.Where(x => x.IsActive == searchDto.IsActive.Value);
-        }
-
-        if (searchDto.IsWheelchairAccessible.HasValue)
-        {
-            query = query.Where(x => x.IsWheelchairAccessible == searchDto.IsWheelchairAccessible.Value);
-        }
-
-        if (searchDto.HasExtraLegroom.HasValue)
-        {
-            query = query.Where(x => x.HasExtraLegroom == searchDto.HasExtraLegroom.Value);
-        }
-
-        if (searchDto.IsReclining.HasValue)
-        {
-            query = query.Where(x => x.IsReclining == searchDto.IsReclining.Value);
         }
 
         // Get total count
@@ -196,9 +147,6 @@ public class SeatRepository : ISeatRepository
             "seattype" => searchDto.SortDirection.ToLower() == "desc"
                 ? query.OrderByDescending(x => x.SeatType)
                 : query.OrderBy(x => x.SeatType),
-            "status" => searchDto.SortDirection.ToLower() == "desc"
-                ? query.OrderByDescending(x => x.Status)
-                : query.OrderBy(x => x.Status),
             "createdat" => searchDto.SortDirection.ToLower() == "desc"
                 ? query.OrderByDescending(x => x.CreatedAt)
                 : query.OrderBy(x => x.CreatedAt),
@@ -242,13 +190,9 @@ public class SeatRepository : ISeatRepository
                     RowLabel = s.RowLabel,
                     SeatNumber = s.SeatNumber,
                     SeatType = s.SeatType.ToString(),
-                    Status = s.Status.ToString(),
                     IsActive = s.IsActive,
                     PositionX = s.PositionX,
                     PositionY = s.PositionY,
-                    IsWheelchairAccessible = s.IsWheelchairAccessible,
-                    HasExtraLegroom = s.HasExtraLegroom,
-                    IsReclining = s.IsReclining,
                     SpecialNotes = s.SpecialNotes
                 }).ToList()
             })
@@ -332,36 +276,24 @@ public class SeatRepository : ISeatRepository
             .ToListAsync(ct);
 
         var totalSeats = seats.Count;
-        var availableSeats = seats.Count(s => s.Status == SeatStatus.Available);
-        var occupiedSeats = seats.Count(s => s.Status == SeatStatus.Occupied);
-        var maintenanceSeats = seats.Count(s => s.Status == SeatStatus.Maintenance);
-        var disabledSeats = seats.Count(s => s.Status == SeatStatus.Disabled);
+        var activeSeats = seats.Count(s => s.IsActive);
 
         var seatsByType = seats
             .GroupBy(s => s.SeatType.ToString())
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var occupancyRate = totalSeats > 0 ? (double)occupiedSeats / totalSeats * 100 : 0;
-
         return new SeatStatsDto
         {
             TotalSeats = totalSeats,
-            AvailableSeats = availableSeats,
-            OccupiedSeats = occupiedSeats,
-            MaintenanceSeats = maintenanceSeats,
-            DisabledSeats = disabledSeats,
-            SeatsByType = seatsByType,
-            OccupancyRate = Math.Round(occupancyRate, 2),
-            WheelchairAccessibleSeats = seats.Count(s => s.IsWheelchairAccessible),
-            ExtraLegroomSeats = seats.Count(s => s.HasExtraLegroom),
-            RecliningSeats = seats.Count(s => s.IsReclining)
+            ActiveSeats = activeSeats,
+            SeatsByType = seatsByType
         };
     }
 
     public async Task<List<Seat>> GetAvailableSeatsAsync(Guid roomId, CancellationToken ct = default)
     {
         return await _context.Seats
-            .Where(s => s.RoomId == roomId && s.Status == SeatStatus.Available && s.IsActive)
+            .Where(s => s.RoomId == roomId && s.IsActive)
             .OrderBy(s => s.RowLabel)
             .ThenBy(s => s.SeatNumber)
             .ToListAsync(ct);

@@ -576,16 +576,7 @@ namespace be_movie_booking.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("HasExtraLegroom")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsReclining")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsWheelchairAccessible")
                         .HasColumnType("boolean");
 
                     b.Property<int?>("PositionX")
@@ -611,9 +602,6 @@ namespace be_movie_booking.Migrations
                     b.Property<string>("SpecialNotes")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
