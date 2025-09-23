@@ -76,8 +76,8 @@ public class AuthService : IAuthService
         var rt = await _refreshTokens.GetByHashAsync(hash) ?? throw new UnauthorizedAccessException();
         if (rt.RevokedAt != null || rt.ExpiresAt <= DateTime.UtcNow) throw new UnauthorizedAccessException();
 
-        rt.RevokedAt = DateTime.UtcNow;
-        rt.RevokedByIp = ip;
+        rt.RevokedAt = DateTime.UtcNow; // Mark the old token as revoked
+        rt.RevokedByIp = ip; // Log the IP address that made the request
         var user = rt.User;
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
         var (access, accessExp) = _tokens.CreateAccessTokenAsync(user, roles).Result;

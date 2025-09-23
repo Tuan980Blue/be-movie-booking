@@ -94,16 +94,4 @@ public class AuthController : ControllerBase
         await _auth.LogoutAsync(Guid.Parse(sub));
         return Ok();
     }
-
-    // ===== DEMO ENDPOINTS CHO ROLE-BASED AUTHORIZATION =====
-
-    [Authorize(Roles = "Admin")]
-    [HttpGet("admin-only")]
-    public IActionResult AdminOnly()
-    {
-        return Ok(new { 
-            Message = "Chỉ Admin mới có thể truy cập endpoint này!",
-            Timestamp = DateTime.UtcNow
-        });
-    }
 }
