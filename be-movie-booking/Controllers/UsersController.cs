@@ -20,6 +20,8 @@ public class UsersController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> GetMe()
     {
+        //User ở đây là HttpContext.User đã được middleware gắn sẵn
+        //JwtRegisteredClaimNames.Sub thường chứa UserId hoặc định danh duy nhất của người dùng
         var sub = User?.Claims?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
                   ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (sub == null) return Unauthorized();
