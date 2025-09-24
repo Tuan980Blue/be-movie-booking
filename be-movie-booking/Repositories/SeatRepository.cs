@@ -25,6 +25,7 @@ public interface ISeatRepository
     Task<SeatStatsDto> GetStatsAsync(Guid roomId, CancellationToken ct = default);
     Task<List<Seat>> GetAvailableSeatsAsync(Guid roomId, CancellationToken ct = default);
     Task<List<Seat>> GetSeatsByTypeAsync(Guid roomId, SeatType seatType, CancellationToken ct = default);
+    Task<List<Seat>> GetByIdsAsync(List<Guid> ids, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -305,6 +306,13 @@ public class SeatRepository : ISeatRepository
             .Where(s => s.RoomId == roomId && s.SeatType == seatType && s.IsActive)
             .OrderBy(s => s.RowLabel)
             .ThenBy(s => s.SeatNumber)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Seat>> GetByIdsAsync(List<Guid> ids, CancellationToken ct = default)
+    {
+        return await _context.Seats
+            .Where(s => ids.Contains(s.Id))
             .ToListAsync(ct);
     }
 }

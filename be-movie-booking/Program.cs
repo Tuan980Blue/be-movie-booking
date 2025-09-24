@@ -82,6 +82,9 @@ builder.Services.AddScoped<be_movie_booking.Services.ISeatService, be_movie_book
 builder.Services.AddScoped<be_movie_booking.Services.IPriceRuleService, be_movie_booking.Services.PriceRuleService>();
 builder.Services.AddScoped<be_movie_booking.Services.IPricingService, be_movie_booking.Services.PricingService>();
 
+// Showtime services
+builder.Services.AddScoped<be_movie_booking.Services.IShowtimeService, be_movie_booking.Services.ShowtimeService>();
+
 // Đăng ký các repository để truy cập database
 builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();   // Repo cũng Scoped để dùng chung DbContext trong 1 request
 builder.Services.AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
@@ -98,6 +101,9 @@ builder.Services.AddScoped<be_movie_booking.Repositories.ISeatRepository, be_mov
 
 // PriceRule repository
 builder.Services.AddScoped<be_movie_booking.Repositories.IPriceRuleRepository, be_movie_booking.Repositories.PriceRuleRepository>();
+
+// Showtime repository
+builder.Services.AddScoped<be_movie_booking.Repositories.IShowtimeRepository, be_movie_booking.Repositories.ShowtimeRepository>();
 
 
 // Build ứng dụng từ builder
