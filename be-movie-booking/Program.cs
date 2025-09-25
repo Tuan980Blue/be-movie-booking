@@ -22,6 +22,19 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<MovieBookingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Cấu hình CORS để cho phép frontend (React, Vue...) truy cập API
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendCors", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000"   // CRA (nếu dùng)
+            )
+            .AllowAnyHeader()               // hoặc .WithHeaders("Content-Type","Authorization")
+            .WithMethods("GET","POST","PUT","DELETE","OPTIONS")
+            .AllowCredentials();            // cần nếu dùng cookie refresh_token
+    });
+});
 
 // ===== CẤU HÌNH JWT AUTHENTICATION =====
 
@@ -119,6 +132,9 @@ if (app.Environment.IsDevelopment())
 
 // Redirect HTTP requests sang HTTPS để bảo mật
 app.UseHttpsRedirection();
+
+// Bật CORS TRƯỚC UseAuthentication/UseAuthorization
+app.UseCors("FrontendCors");
 
 // Middleware xác thực - phải được đặt trước UseAuthorization
 // Khi request đến, Authentication middleware (được thêm bằng app.UseAuthentication()) sẽ:
