@@ -28,6 +28,8 @@ public class Movie
     public string? PosterUrl { get; set; }
     public string? BackdropUrl { get; set; }
     public string? TrailerUrl { get; set; }
+    public string? Director { get; set; }
+    public string? Actors { get; set; }
     public MovieStatus Status { get; set; } = MovieStatus.Draft;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

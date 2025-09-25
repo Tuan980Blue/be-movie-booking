@@ -81,6 +81,8 @@ public class MovieService : IMovieService
             PosterUrl = dto.PosterUrl,
             BackdropUrl = dto.BackdropUrl,
             TrailerUrl = dto.TrailerUrl,
+            Director = dto.Director,
+            Actors = dto.Actors,
             Status = MovieStatus.Draft,
             CreatedAt = DateTime.UtcNow
         };
@@ -128,6 +130,8 @@ public class MovieService : IMovieService
         movie.PosterUrl = dto.PosterUrl;
         movie.BackdropUrl = dto.BackdropUrl;
         movie.TrailerUrl = dto.TrailerUrl;
+        movie.Director = dto.Director;
+        movie.Actors = dto.Actors;
         movie.UpdatedAt = DateTime.UtcNow;
 
         // Update genres
@@ -206,6 +210,8 @@ public class MovieService : IMovieService
             PosterUrl = movie.PosterUrl,
             BackdropUrl = movie.BackdropUrl,
             TrailerUrl = movie.TrailerUrl,
+            Director = movie.Director,
+            Actors = movie.Actors,
             Status = movie.Status.ToString(),
             CreatedAt = movie.CreatedAt,
             UpdatedAt = movie.UpdatedAt,

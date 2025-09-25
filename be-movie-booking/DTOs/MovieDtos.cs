@@ -35,6 +35,12 @@ public class CreateMovieDto
     [Url(ErrorMessage = "URL trailer không hợp lệ")]
     public string? TrailerUrl { get; set; }
 
+    [StringLength(200, ErrorMessage = "Tên đạo diễn không được vượt quá 200 ký tự")]
+    public string? Director { get; set; }
+
+    [StringLength(500, ErrorMessage = "Danh sách diễn viên không được vượt quá 500 ký tự")]
+    public string? Actors { get; set; }
+
     [Required(ErrorMessage = "Danh sách thể loại là bắt buộc")]
     [MinLength(1, ErrorMessage = "Phim phải có ít nhất 1 thể loại")]
     public List<Guid> GenreIds { get; set; } = new();
@@ -72,6 +78,12 @@ public class UpdateMovieDto
 
     [Url(ErrorMessage = "URL trailer không hợp lệ")]
     public string? TrailerUrl { get; set; }
+
+    [StringLength(200, ErrorMessage = "Tên đạo diễn không được vượt quá 200 ký tự")]
+    public string? Director { get; set; }
+
+    [StringLength(500, ErrorMessage = "Danh sách diễn viên không được vượt quá 500 ký tự")]
+    public string? Actors { get; set; }
 
     [Required(ErrorMessage = "Danh sách thể loại là bắt buộc")]
     [MinLength(1, ErrorMessage = "Phim phải có ít nhất 1 thể loại")]
@@ -131,6 +143,8 @@ public class MovieReadDto
     public string? PosterUrl { get; set; }
     public string? BackdropUrl { get; set; }
     public string? TrailerUrl { get; set; }
+    public string? Director { get; set; }
+    public string? Actors { get; set; }
     public string Status { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
