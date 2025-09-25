@@ -164,6 +164,9 @@ namespace be_movie_booking.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Actors")
+                        .HasColumnType("text");
+
                     b.Property<string>("BackdropUrl")
                         .HasColumnType("text");
 
@@ -171,6 +174,9 @@ namespace be_movie_booking.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Director")
                         .HasColumnType("text");
 
                     b.Property<int>("DurationMinutes")

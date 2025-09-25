@@ -63,7 +63,9 @@ public class MovieRepository : IMovieRepository
             query = query.Where(m => 
                 m.Title.ToLower().Contains(searchTerm) ||
                 (m.OriginalTitle != null && m.OriginalTitle.ToLower().Contains(searchTerm)) ||
-                (m.Description != null && m.Description.ToLower().Contains(searchTerm)));
+                (m.Description != null && m.Description.ToLower().Contains(searchTerm)) ||
+                (m.Director != null && m.Director.ToLower().Contains(searchTerm)) ||
+                (m.Actors != null && m.Actors.ToLower().Contains(searchTerm)));
         }
 
         // Apply genre filter
@@ -117,6 +119,12 @@ public class MovieRepository : IMovieRepository
             "status" => searchDto.SortDirection.ToLower() == "asc" 
                 ? query.OrderBy(m => m.Status) 
                 : query.OrderByDescending(m => m.Status),
+            "director" => searchDto.SortDirection.ToLower() == "asc" 
+                ? query.OrderBy(m => m.Director) 
+                : query.OrderByDescending(m => m.Director),
+            "actors" => searchDto.SortDirection.ToLower() == "asc" 
+                ? query.OrderBy(m => m.Actors) 
+                : query.OrderByDescending(m => m.Actors),
             _ => searchDto.SortDirection.ToLower() == "asc" 
                 ? query.OrderBy(m => m.CreatedAt) 
                 : query.OrderByDescending(m => m.CreatedAt)
