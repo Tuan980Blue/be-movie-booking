@@ -28,7 +28,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("FrontendCors", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:3000"   // CRA (nếu dùng)
+                "https://cinema-sigma-flame.vercel.app",
+                "http://localhost:3000"
             )
             .AllowAnyHeader()               // hoặc .WithHeaders("Content-Type","Authorization")
             .WithMethods("GET","POST","PUT","DELETE","OPTIONS")
