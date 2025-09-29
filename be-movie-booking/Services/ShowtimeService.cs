@@ -11,6 +11,7 @@ public interface IShowtimeService
 {
     Task<ShowtimeReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<PagedResult<ShowtimeReadDto>> ListAsync(ShowtimeSearchDto searchDto, CancellationToken ct = default);
+    Task<List<ShowtimeReadDto>> ListByMovieIdAsync(Guid movieId, CancellationToken ct = default);
     Task<ShowtimeReadDto?> CreateAsync(CreateShowtimeDto dto, CancellationToken ct = default);
     Task<ShowtimeReadDto?> UpdateAsync(Guid id, UpdateShowtimeDto dto, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
@@ -65,6 +66,12 @@ public class ShowtimeService : IShowtimeService
             PageSize = searchDto.PageSize,
             TotalItems = total
         };
+    }
+
+    public async Task<List<ShowtimeReadDto>> ListByMovieIdAsync(Guid movieId, CancellationToken ct = default)
+    {
+        var list = await _showtimeRepository.ListByMovieIdAsync(movieId, ct);
+        return list.Select(MapToReadDto).ToList();
     }
 
 

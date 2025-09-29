@@ -37,15 +37,15 @@ public class ShowtimesController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy chi tiết suất chiếu theo ID
+    /// Lấy danh sách suất chiếu theo ID phim
     /// </summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById([FromRoute] Guid id)
+    [HttpGet("movie/{movieId}")]
+    public async Task<IActionResult> GetByMovieId([FromRoute] Guid movieId)
     {
         try
         {
-            var showtime = await _showtimeService.GetByIdAsync(id);
-            return showtime == null ? NotFound() : Ok(showtime);
+            var showtimes = await _showtimeService.ListByMovieIdAsync(movieId);
+            return Ok(showtimes);
         }
         catch (Exception ex)
         {
@@ -68,7 +68,7 @@ public class ShowtimesController : ControllerBase
             }
 
             var showtime = await _showtimeService.CreateAsync(dto);
-            return showtime == null ? BadRequest() : CreatedAtAction(nameof(GetById), new { id = showtime.Id }, showtime);
+            return showtime == null ? BadRequest() : CreatedAtAction(nameof(GetByMovieId), new { movieId = showtime.MovieId }, showtime);
         }
         catch (ArgumentException ex)
         {
