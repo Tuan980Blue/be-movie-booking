@@ -13,6 +13,7 @@ public interface IShowtimeRepository
     Task<Showtime?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<Showtime?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default);
     Task<(List<Showtime> showtimes, int total)> ListAsync(ShowtimeSearchDto searchDto, CancellationToken ct = default);
+    Task<List<Showtime>> ListByMovieIdAsync(Guid movieId, CancellationToken ct = default);
     Task<Showtime?> AddAsync(Showtime showtime, CancellationToken ct = default);
     Task<Showtime?> UpdateAsync(Showtime showtime, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
@@ -120,6 +121,18 @@ public class ShowtimeRepository : IShowtimeRepository
             .ToListAsync(ct);
 
         return (showtimes, total);
+    }
+
+    public async Task<List<Showtime>> ListByMovieIdAsync(Guid movieId, CancellationToken ct = default)
+    {
+        return await _db.Showtimes
+            .AsNoTracking()
+            .Include(s => s.Movie)
+            .Include(s => s.Room)
+            .ThenInclude(r => r.Cinema)
+            .Where(s => s.MovieId == movieId && s.StartUtc >= DateTime.UtcNow)
+            .OrderBy(s => s.StartUtc)
+            .ToListAsync(ct);
     }
 
 
