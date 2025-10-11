@@ -10,6 +10,8 @@ public interface IAuthService
     Task<(User user, string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> LoginAsync(string email, string password, string? deviceId, string? userAgent, string? ip);
     Task<(string accessToken, DateTime accessExpires, string refreshToken, DateTime refreshExpires)> RefreshTokenAsync(string refreshToken, string? deviceId, string? userAgent, string? ip);
     Task LogoutAsync(Guid userId);
+    Task LogoutDeviceAsync(Guid userId, string? deviceId);
+    Task LogoutAllDevicesAsync(Guid userId);
     Task ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
 }
 
@@ -105,6 +107,28 @@ public class AuthService : IAuthService
     {
         var tokens = await _refreshTokens.GetActiveByUserAsync(userId);
         foreach (var t in tokens) t.RevokedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task LogoutDeviceAsync(Guid userId, string? deviceId)
+    {
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            // Nếu không có deviceId, revoke tất cả (fallback về behavior cũ)
+            await LogoutAllDevicesAsync(userId);
+            return;
+        }
+
+        // Chỉ revoke token của device cụ thể
+        var deviceTokens = await _refreshTokens.GetActiveByDeviceAsync(userId, deviceId);
+        foreach (var t in deviceTokens) t.RevokedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task LogoutAllDevicesAsync(Guid userId)
+    {
+        var allTokens = await _refreshTokens.GetActiveByUserAsync(userId);
+        foreach (var t in allTokens) t.RevokedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
     }
 }

@@ -9,6 +9,7 @@ public interface IRefreshTokenRepository
     Task<RefreshToken?> GetByHashAsync(string tokenHash, CancellationToken ct = default);
     Task AddAsync(RefreshToken token, CancellationToken ct = default);
     Task<List<RefreshToken>> GetActiveByUserAsync(Guid userId, CancellationToken ct = default);
+    Task<List<RefreshToken>> GetActiveByDeviceAsync(Guid userId, string deviceId, CancellationToken ct = default);
 }
 public class RefreshTokenRepository : IRefreshTokenRepository
 {
@@ -36,5 +37,15 @@ public class RefreshTokenRepository : IRefreshTokenRepository
     public Task<List<RefreshToken>> GetActiveByUserAsync(Guid userId, CancellationToken ct = default)
     {
         return _db.RefreshTokens.Where(r => r.UserId == userId && r.RevokedAt == null && r.ExpiresAt > DateTime.UtcNow).ToListAsync(ct);
+    }
+
+    public Task<List<RefreshToken>> GetActiveByDeviceAsync(Guid userId, string deviceId, CancellationToken ct = default)
+    {
+        return _db.RefreshTokens
+            .Where(r => r.UserId == userId 
+                     && r.DeviceId == deviceId
+                     && r.RevokedAt == null 
+                     && r.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync(ct);
     }
 }
