@@ -10,6 +10,7 @@ public interface IUserService
     Task<UserReadDto?> UpdateMeAsync(Guid userId, UserUpdateMeDto dto, CancellationToken ct = default);
     Task<PagedResult<UserReadDto>> ListUsersAsync(int page, int pageSize, string? search, CancellationToken ct = default);
     Task<UserReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<bool> AssignAdminRoleAsync(Guid userId, CancellationToken ct = default);
 }
 
 public class UserService : IUserService
@@ -65,6 +66,28 @@ public class UserService : IUserService
     {
         var user = await _users.GetByIdWithRolesAsync(id, ct);
         return user == null ? null : MapToReadDto(user);
+    }
+
+    public async Task<bool> AssignAdminRoleAsync(Guid userId, CancellationToken ct = default)
+    {
+        var user = await _users.GetByIdAsync(userId, ct);
+        if (user == null) return false;
+
+        // Check if user already has admin role
+        var hasAdminRole = user.UserRoles.Any(ur => ur.Role.Name == "Admin");
+        if (hasAdminRole) return true;
+
+        // Add admin role
+        var adminRoleId = Guid.Parse("22222222-2222-2222-2222-222222222222"); // Admin role ID
+        var userRole = new UserRole
+        {
+            UserId = userId,
+            RoleId = adminRoleId
+        };
+
+        _db.UserRoles.Add(userRole);
+        await _db.SaveChangesAsync(ct);
+        return true;
     }
 
     private static UserReadDto MapToReadDto(User user)
