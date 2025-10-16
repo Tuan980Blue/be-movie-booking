@@ -29,7 +29,6 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "https://touchcinema-ta.vercel.app",
-                "https://cinema-sigma-flame.vercel.app",
                 "http://localhost:3000"
             )
             .AllowAnyHeader()               // hoặc .WithHeaders("Content-Type","Authorization")
