@@ -28,6 +28,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("FrontendCors", policy =>
     {
         policy.WithOrigins(
+                "https://touchcinema-ta.vercel.app",
                 "https://cinema-sigma-flame.vercel.app",
                 "http://localhost:3000"
             )

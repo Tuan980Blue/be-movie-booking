@@ -3,21 +3,19 @@ namespace be_movie_booking.Models;
 public enum BookingStatus
 {
     Pending = 1,
-    Held = 2,
-    Confirmed = 3,
-    Canceled = 4,
-    Expired = 5,
-    Refunding = 6,
-    Refunded = 7
+    Confirmed = 2,
+    Canceled = 3,
+    Expired = 4,
+    Refunding = 5,
+    Refunded = 6
 }
 
 public enum BookingItemStatus
 {
     Pending = 1,
-    Held = 2,
-    Confirmed = 3,
-    Canceled = 4,
-    Expired = 5
+    Confirmed = 2,
+    Canceled = 3,
+    Expired = 4
 }
 
 public class Booking
@@ -28,7 +26,6 @@ public class Booking
     public User? User { get; set; }
 
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
-    public DateTime? HoldExpiresAt { get; set; }
 
     public int TotalAmountMinor { get; set; }
     public string Currency { get; set; } = "VND";

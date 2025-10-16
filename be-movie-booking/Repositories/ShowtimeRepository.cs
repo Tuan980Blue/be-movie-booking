@@ -194,7 +194,7 @@ public class ShowtimeRepository : IShowtimeRepository
         // Get booked seats count
         var bookedSeatsCount = await _db.BookingItems
             .Where(bi => bi.ShowtimeId == showtimeId && 
-                        (bi.Status == BookingItemStatus.Held || bi.Status == BookingItemStatus.Confirmed))
+                        (bi.Status == BookingItemStatus.Confirmed))
             .CountAsync(ct);
 
         // Get total active seats

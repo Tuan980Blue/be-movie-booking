@@ -57,6 +57,14 @@ public class UsersController : ControllerBase
         var dto = await _users.GetByIdAsync(id);
         return dto == null ? NotFound() : Ok(dto);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{id}/assign-admin")]
+    public async Task<IActionResult> AssignAdminRole([FromRoute] Guid id)
+    {
+        var result = await _users.AssignAdminRoleAsync(id);
+        return result ? Ok() : NotFound();
+    }
 }
 
 

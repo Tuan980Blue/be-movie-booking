@@ -1,8 +1,6 @@
-
 using be_movie_booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 
 namespace be_movie_booking.Controllers;
 
@@ -18,9 +16,13 @@ public class AuthController : ControllerBase
     }
 
     public record RegisterRequest(string Email, string Password, string FullName);
+
     public record LoginRequest(string Email, string Password, string? DeviceId, string? UserAgent);
+
     public record RefreshRequest(string? RefreshToken, string? DeviceId, string? UserAgent);
+
     public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
     public record LogoutDeviceRequest(string? DeviceId);
 
     [AllowAnonymous]
@@ -40,13 +42,28 @@ public class AuthController : ControllerBase
             // Set HttpOnly refresh token cookie
             if (!string.IsNullOrWhiteSpace(result.refreshToken))
             {
+                //Append cookie: để thêm hoặc cập nhật một cookie vào phản hồi HTTP gửi đến trình duyệt
                 Response.Cookies.Append(
-                    "refresh_token",
-                    result.refreshToken,
+                    "refresh_token", // Tên cookie
+                    result.refreshToken, // Giá trị của cookie
                     new CookieOptions
                     {
-                        HttpOnly = true,
-                        Secure = true, // require HTTPS in production
+                        HttpOnly = true, // Cookie chỉ có thể được truy cập bởi server, không qua JavaScript
+                        Secure = true, // Cookie chỉ được gửi qua kết nối HTTPS
+                        SameSite = SameSiteMode
+                            .Lax, // Chính sách SameSite để kiểm soát việc gửi cookie trong các yêu cầu cross-site
+                        Path = "/", // Cookie áp dụng cho toàn bộ đường dẫn trên domain
+                        Expires = result.refreshExpires // Thời gian hết hạn của cookie
+                    }
+                );
+                // Thêm cookie flag cho client
+                Response.Cookies.Append(
+                    "logged_in",
+                    "true",
+                    new CookieOptions
+                    {
+                        HttpOnly = false, // để client có thể đọc được
+                        Secure = true,
                         SameSite = SameSiteMode.Lax,
                         Path = "/",
                         Expires = result.refreshExpires
@@ -86,6 +103,19 @@ public class AuthController : ControllerBase
                     new CookieOptions
                     {
                         HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Lax,
+                        Path = "/",
+                        Expires = result.refreshExpires
+                    }
+                );
+                // Thêm cookie flag cho client
+                Response.Cookies.Append(
+                    "logged_in",
+                    "true",
+                    new CookieOptions
+                    {
+                        HttpOnly = false, // để client có thể đọc được
                         Secure = true,
                         SameSite = SameSiteMode.Lax,
                         Path = "/",
@@ -135,6 +165,19 @@ public class AuthController : ControllerBase
                         Expires = result.refreshExpires
                     }
                 );
+                // Thêm cookie flag cho client
+                Response.Cookies.Append(
+                    "logged_in",
+                    "true",
+                    new CookieOptions
+                    {
+                        HttpOnly = false, // để client có thể đọc được
+                        Secure = true,
+                        SameSite = SameSiteMode.Lax,
+                        Path = "/",
+                        Expires = result.refreshExpires
+                    }
+                );
             }
 
             // Do not return refresh token in body
@@ -150,8 +193,11 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
     {
-        var sub = User?.Claims?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
-                  ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var sub = User?.Claims
+                      ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
+                      ?.Value
+                  ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                      ?.Value;
         if (sub == null) return Unauthorized();
         try
         {
@@ -163,7 +209,7 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
     }
-    
+
     /// <summary>
     /// Logout từ thiết bị hiện tại (giữ đăng nhập trên thiết bị khác)
     /// </summary>
@@ -171,8 +217,11 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout([FromBody] LogoutDeviceRequest? req = null)
     {
-        var sub = User?.Claims?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
-                  ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var sub = User?.Claims
+                      ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
+                      ?.Value
+                  ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                      ?.Value;
         if (sub == null)
         {
             // Clear cookie anyway
@@ -193,6 +242,7 @@ public class AuthController : ControllerBase
 
         // Clear refresh token cookie
         Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/" });
+        Response.Cookies.Delete("logged_in", new CookieOptions { Path = "/" });
 
         return Ok();
     }
