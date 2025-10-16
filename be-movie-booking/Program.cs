@@ -18,9 +18,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 // Cấu hình Entity Framework với PostgreSQL
-// Sử dụng connection string từ appsettings.json
+// đọc connection string từ env
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<MovieBookingDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
+Console.WriteLine("Connection string: " + connectionString);
 
 // Cấu hình CORS để cho phép frontend (React, Vue...) truy cập API
 builder.Services.AddCors(options =>
