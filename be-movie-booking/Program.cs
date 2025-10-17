@@ -136,6 +136,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi(); // Tạo endpoint cho OpenAPI specification
 }
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<MovieBookingDbContext>();
+    db.Database.Migrate();
+}
+
 // Redirect HTTP requests sang HTTPS để bảo mật
 app.UseHttpsRedirection();
 

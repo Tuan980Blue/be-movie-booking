@@ -20,4 +20,4 @@ RUN dotnet publish "./be-movie-booking.csproj" -c $BUILD_CONFIGURATION -o /app/p
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["bash", "-c", "dotnet ef database update && dotnet be-movie-booking.dll"]
+ENTRYPOINT ["dotnet", "be-movie-booking.dll"]
