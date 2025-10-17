@@ -4,6 +4,9 @@ using be_movie_booking.Data;         // DbContext của ứng dụng
 using Microsoft.AspNetCore.Authentication.JwtBearer;  // JWT Bearer authentication
 using Microsoft.IdentityModel.Tokens;  // Token validation
 using System.Text;                    // Encoding cho JWT secret
+using DotNetEnv;                  // Đọc biến môi trường từ .env file
+
+Env.Load(); // Load biến môi trường từ .env file
 
 // Tạo WebApplication builder để cấu hình ứng dụng
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +25,7 @@ builder.Services.AddControllers();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<MovieBookingDbContext>(options =>
     options.UseNpgsql(connectionString));
-Console.WriteLine("Connection string: " + connectionString);
+Console.WriteLine("*****Connection string: " + connectionString);
 
 // Cấu hình CORS để cho phép frontend (React, Vue...) truy cập API
 builder.Services.AddCors(options =>
