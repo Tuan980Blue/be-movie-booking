@@ -42,9 +42,6 @@ namespace be_movie_booking.Migrations
                     b.Property<string>("CustomerContactJson")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("HoldExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
