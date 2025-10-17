@@ -12,7 +12,7 @@ using be_movie_booking.Data;
 namespace be_movie_booking.Migrations
 {
     [DbContext(typeof(MovieBookingDbContext))]
-    [Migration("20251017024256_InitialCreate")]
+    [Migration("20251017025203_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
