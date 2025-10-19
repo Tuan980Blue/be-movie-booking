@@ -51,6 +51,7 @@ public class AuthController : ControllerBase
                         HttpOnly = true, // Cookie chỉ có thể được truy cập bởi server, không qua JavaScript
                         Secure = true, // Cookie chỉ được gửi qua kết nối HTTPS
                         SameSite = SameSiteMode.None, // Chính sách SameSite để kiểm soát việc gửi cookie (none cho phép gửi cookie giữa FE/BE khác domain)
+                        Domain = null,
                         Path = "/", // Cookie áp dụng cho toàn bộ đường dẫn trên domain
                         Expires = result.refreshExpires // Thời gian hết hạn của cookie
                     }
@@ -64,6 +65,7 @@ public class AuthController : ControllerBase
                         HttpOnly = false, // để client có thể đọc được
                         Secure = true,
                         SameSite = SameSiteMode.None,
+                        Domain = null,
                         Path = "/",
                         Expires = result.refreshExpires
                     }
@@ -104,6 +106,7 @@ public class AuthController : ControllerBase
                         HttpOnly = true,
                         Secure = true,
                         SameSite = SameSiteMode.None,
+                        Domain = null,
                         Path = "/",
                         Expires = result.refreshExpires
                     }
@@ -117,6 +120,7 @@ public class AuthController : ControllerBase
                         HttpOnly = false, // để client có thể đọc được
                         Secure = true,
                         SameSite = SameSiteMode.None,
+                        Domain = null,
                         Path = "/",
                         Expires = result.refreshExpires
                     }
@@ -160,6 +164,7 @@ public class AuthController : ControllerBase
                         HttpOnly = true,
                         Secure = true,
                         SameSite = SameSiteMode.None,
+                        Domain = null,
                         Path = "/",
                         Expires = result.refreshExpires
                     }
@@ -173,6 +178,7 @@ public class AuthController : ControllerBase
                         HttpOnly = false, // để client có thể đọc được
                         Secure = true,
                         SameSite = SameSiteMode.None,
+                        Domain = null,
                         Path = "/",
                         Expires = result.refreshExpires
                     }
