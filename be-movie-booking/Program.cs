@@ -141,6 +141,7 @@ app.UseHttpsRedirection();
 
 // Bật CORS TRƯỚC UseAuthentication/UseAuthorization
 app.UseCors("FrontendCors");
+app.UseCors("AllowVercelFrontend");
 
 // Middleware xác thực - phải được đặt trước UseAuthorization
 // Khi request đến, Authentication middleware (được thêm bằng app.UseAuthentication()) sẽ:
