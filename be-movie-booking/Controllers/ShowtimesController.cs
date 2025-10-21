@@ -37,6 +37,23 @@ public class ShowtimesController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy thông tin chi tiết suất chiếu theo ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById([FromRoute] Guid id)
+    {
+        try
+        {
+            var showtime = await _showtimeService.GetByIdAsync(id);
+            return showtime == null ? NotFound() : Ok(showtime);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy danh sách suất chiếu theo ID phim
     /// </summary>
     [HttpGet("movie/{movieId}")]
