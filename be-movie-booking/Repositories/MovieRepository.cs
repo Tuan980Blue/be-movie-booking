@@ -75,12 +75,9 @@ public class MovieRepository : IMovieRepository
         }
 
         // Apply status filter
-        if (!string.IsNullOrWhiteSpace(searchDto.Status))
+        if (searchDto.Status.HasValue)
         {
-            if (Enum.TryParse<MovieStatus>(searchDto.Status, out var status))
-            {
-                query = query.Where(m => m.Status == status);
-            }
+            query = query.Where(m => m.Status == searchDto.Status.Value);
         }
 
         // Apply release year filter

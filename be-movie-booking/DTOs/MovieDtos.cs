@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using be_movie_booking.Models;
 
 namespace be_movie_booking.DTOs;
 
@@ -96,7 +97,7 @@ public class UpdateMovieDto
 public class ChangeMovieStatusDto
 {
     [Required(ErrorMessage = "Trạng thái là bắt buộc")]
-    public string Status { get; set; } = null!;
+    public MovieStatus Status { get; set; } = MovieStatus.Draft;
 }
 
 /// <summary>
@@ -109,7 +110,7 @@ public class MovieSearchDto
 
     public List<Guid>? GenreIds { get; set; }
 
-    public string? Status { get; set; }
+    public MovieStatus? Status { get; set; }
 
     public int? ReleaseYear { get; set; }
 
@@ -145,7 +146,7 @@ public class MovieReadDto
     public string? TrailerUrl { get; set; }
     public string? Director { get; set; }
     public string? Actors { get; set; }
-    public string Status { get; set; } = null!;
+    public MovieStatus Status { get; set; } = MovieStatus.Draft;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public List<GenreReadDto> Genres { get; set; } = new();
