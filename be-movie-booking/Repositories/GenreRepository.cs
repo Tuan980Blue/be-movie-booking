@@ -17,6 +17,7 @@ public interface IGenreRepository
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
     Task<bool> ExistsByNameAsync(string name, CancellationToken ct = default);
     Task<List<Genre>> GetByIdsAsync(List<Guid> ids, CancellationToken ct = default);
+    Task<Genre?> GetByIdWithMoviesAsync(Guid id, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -40,6 +41,7 @@ public class GenreRepository : IGenreRepository
     public async Task<List<Genre>> ListAsync(CancellationToken ct = default)
     {
         return await _db.Genres
+            .Include(g => g.MovieGenres)
             .OrderBy(g => g.Name)
             .ToListAsync(ct);
     }
@@ -83,5 +85,12 @@ public class GenreRepository : IGenreRepository
         return await _db.Genres
             .Where(g => ids.Contains(g.Id))
             .ToListAsync(ct);
+    }
+
+    public async Task<Genre?> GetByIdWithMoviesAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _db.Genres
+            .Include(g => g.MovieGenres)
+            .FirstOrDefaultAsync(g => g.Id == id, ct);
     }
 }
