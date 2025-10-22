@@ -36,7 +36,7 @@ public class GenreService : IGenreService
 
     public async Task<GenreReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        var genre = await _genreRepository.GetByIdAsync(id, ct);
+        var genre = await _genreRepository.GetByIdWithMoviesAsync(id, ct);
         return genre == null ? null : MapToReadDto(genre);
     }
 
@@ -93,7 +93,8 @@ public class GenreService : IGenreService
         return new GenreReadDto
         {
             Id = genre.Id,
-            Name = genre.Name
+            Name = genre.Name,
+            MovieCount = genre.MovieGenres?.Count ?? 0
         };
     }
 }

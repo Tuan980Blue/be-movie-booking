@@ -159,14 +159,9 @@ public class MovieService : IMovieService
         var movie = await _movieRepository.GetByIdWithGenresAsync(id, ct);
         if (movie == null) return null;
 
-        if (Enum.TryParse<MovieStatus>(dto.Status, out var newStatus))
-        {
-            movie.Status = newStatus;
-            var updatedMovie = await _movieRepository.UpdateAsync(movie, ct);
-            return updatedMovie == null ? null : MapToReadDto(updatedMovie);
-        }
-
-        throw new ArgumentException("Trạng thái không hợp lệ");
+        movie.Status = dto.Status;
+        var updatedMovie = await _movieRepository.UpdateAsync(movie, ct);
+        return updatedMovie == null ? null : MapToReadDto(updatedMovie);
     }
 
     public async Task<List<MovieReadDto>> GetByStatusAsync(string status, CancellationToken ct = default)
@@ -212,7 +207,7 @@ public class MovieService : IMovieService
             TrailerUrl = movie.TrailerUrl,
             Director = movie.Director,
             Actors = movie.Actors,
-            Status = movie.Status.ToString(),
+            Status = movie.Status,
             CreatedAt = movie.CreatedAt,
             UpdatedAt = movie.UpdatedAt,
             Genres = movie.MovieGenres.Select(mg => new GenreReadDto
