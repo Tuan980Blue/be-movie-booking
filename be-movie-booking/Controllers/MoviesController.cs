@@ -2,6 +2,8 @@ using be_movie_booking.DTOs;
 using be_movie_booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using be_movie_booking.Hubs;
 
 namespace be_movie_booking.Controllers;
 
@@ -13,10 +15,12 @@ namespace be_movie_booking.Controllers;
 public class MoviesController : ControllerBase
 {
     private readonly IMovieService _movieService;
+    private readonly IHubContext<AppHub> _hubContext;
 
-    public MoviesController(IMovieService movieService)
+    public MoviesController(IMovieService movieService, IHubContext<AppHub> hubContext)
     {
         _movieService = movieService;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -68,6 +72,11 @@ public class MoviesController : ControllerBase
             }
 
             var movie = await _movieService.CreateAsync(dto);
+            if (movie != null)
+            {
+                // Gửi thông báo real-time 
+                await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
+            }
             return movie == null ? BadRequest() : CreatedAtAction(nameof(GetById), new { id = movie.Id }, movie);
         }
         catch (ArgumentException ex)
@@ -95,6 +104,11 @@ public class MoviesController : ControllerBase
             }
 
             var movie = await _movieService.UpdateAsync(id, dto);
+            if (movie != null)
+            {
+                // Gửi thông báo real-time về việc movies đã được cập nhật
+                await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
+            }
             return movie == null ? NotFound() : Ok(movie);
         }
         catch (ArgumentException ex)
@@ -117,6 +131,11 @@ public class MoviesController : ControllerBase
         try
         {
             var result = await _movieService.DeleteAsync(id);
+            if (result)
+            {
+                // Gửi thông báo real-time về việc movies đã được cập nhật
+                await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
+            }
             return result ? NoContent() : NotFound();
         }
         catch (Exception ex)
@@ -140,6 +159,11 @@ public class MoviesController : ControllerBase
             }
 
             var movie = await _movieService.ChangeStatusAsync(id, dto);
+            if (movie != null)
+            {
+                // Gửi thông báo real-time về việc movies đã được cập nhật
+                await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
+            }
             return movie == null ? NotFound() : Ok(movie);
         }
         catch (ArgumentException ex)
