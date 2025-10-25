@@ -20,6 +20,9 @@ builder.Services.AddOpenApi();
 // Thêm MVC Controllers để xử lý HTTP requests
 builder.Services.AddControllers();
 
+// Thêm SignalR (Real-time communication)
+builder.Services.AddSignalR();
+
 // Cấu hình Entity Framework với PostgreSQL
 // đọc connection string từ env
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -156,6 +159,9 @@ app.UseAuthorization();
 
 // Map các controller endpoints
 app.MapControllers();
+
+// Map SignalR hub endpoint
+app.MapHub<be_movie_booking.Hubs.AppHub>("/hubs/app");
 
 // Chạy ứng dụng
 app.Run();

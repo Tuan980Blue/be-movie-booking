@@ -2,6 +2,8 @@ using be_movie_booking.DTOs;
 using be_movie_booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using be_movie_booking.Hubs;
 
 namespace be_movie_booking.Controllers;
 
@@ -13,10 +15,12 @@ namespace be_movie_booking.Controllers;
 public class GenresController : ControllerBase
 {
     private readonly IGenreService _genreService;
+    private readonly IHubContext<AppHub> _hubContext;
 
-    public GenresController(IGenreService genreService)
+    public GenresController(IGenreService genreService, IHubContext<AppHub> hubContext)
     {
         _genreService = genreService;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -68,6 +72,11 @@ public class GenresController : ControllerBase
             }
 
             var genre = await _genreService.CreateAsync(dto);
+            if (genre != null)
+            {
+                //gửi thông báo real-time về việc genres đã được cập nhật(chỉ gửi group)
+                await _hubContext.Clients.Group("genres").SendAsync("genres_updated");
+            }
             return genre == null ? BadRequest() : CreatedAtAction(nameof(GetById), new { id = genre.Id }, genre);
         }
         catch (ArgumentException ex)
@@ -95,6 +104,11 @@ public class GenresController : ControllerBase
             }
 
             var genre = await _genreService.UpdateAsync(id, dto);
+            if (genre != null)
+            {
+                // Gửi thông báo real-time về việc genres đã được cập nhật
+                await _hubContext.Clients.Group("genres").SendAsync("genres_updated");
+            }
             return genre == null ? NotFound() : Ok(genre);
         }
         catch (ArgumentException ex)
@@ -117,6 +131,11 @@ public class GenresController : ControllerBase
         try
         {
             var result = await _genreService.DeleteAsync(id);
+            if (result)
+            {
+                // Gửi thông báo real-time về việc genres đã được cập nhật
+                await _hubContext.Clients.Group("genres").SendAsync("genres_updated");
+            }
             return result ? NoContent() : NotFound();
         }
         catch (Exception ex)

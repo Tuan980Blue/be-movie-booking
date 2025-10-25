@@ -2,6 +2,8 @@ using be_movie_booking.DTOs;
 using be_movie_booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using be_movie_booking.Hubs;
 
 namespace be_movie_booking.Controllers;
 
@@ -13,10 +15,12 @@ namespace be_movie_booking.Controllers;
 public class ShowtimesController : ControllerBase
 {
     private readonly IShowtimeService _showtimeService;
+    private readonly IHubContext<AppHub> _hubContext;
 
-    public ShowtimesController(IShowtimeService showtimeService)
+    public ShowtimesController(IShowtimeService showtimeService, IHubContext<AppHub> hubContext)
     {
         _showtimeService = showtimeService;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -85,6 +89,11 @@ public class ShowtimesController : ControllerBase
             }
 
             var showtime = await _showtimeService.CreateAsync(dto);
+            if (showtime != null)
+            {
+                // Gửi thông báo real-time về việc showtimes đã được cập nhật
+                await _hubContext.Clients.Group("showtimes").SendAsync("showtimes_updated", showtime.CinemaId, showtime.MovieId);
+            }
             return showtime == null ? BadRequest() : CreatedAtAction(nameof(GetByMovieId), new { movieId = showtime.MovieId }, showtime);
         }
         catch (ArgumentException ex)
@@ -116,6 +125,11 @@ public class ShowtimesController : ControllerBase
             }
 
             var showtime = await _showtimeService.UpdateAsync(id, dto);
+            if (showtime != null)
+            {
+                // Gửi thông báo real-time về việc showtimes đã được cập nhật
+                await _hubContext.Clients.Group("showtimes").SendAsync("showtimes_updated", showtime.CinemaId, showtime.MovieId);
+            }
             return showtime == null ? NotFound() : Ok(showtime);
         }
         catch (ArgumentException ex)
@@ -142,6 +156,11 @@ public class ShowtimesController : ControllerBase
         try
         {
             var result = await _showtimeService.DeleteAsync(id);
+            if (result)
+            {
+                // Gửi thông báo real-time về việc showtimes đã được cập nhật
+                await _hubContext.Clients.Group("showtimes").SendAsync("showtimes_updated", 0, Guid.Empty);
+            }
             return result ? NoContent() : NotFound();
         }
         catch (InvalidOperationException ex)
