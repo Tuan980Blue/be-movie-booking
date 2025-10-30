@@ -19,6 +19,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
         <PackageReference Include="NSwag.AspNetCore" Version="14.6.1" />
         <PackageReference Include="StackExchange.Redis" Version="2.9.32" /> <!--library tell Redis server  -->
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.10" />
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.0" />
         <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     </ItemGroup>

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DotNetEnv;
+using StackExchange.Redis;
 
 //
 // === LOAD ENV FILE ===
@@ -53,8 +54,22 @@ Console.WriteLine("*****Connection string: " + connectionString);
 //
 var redisConnection = builder.Configuration.GetValue<string>("Redis:Connection");
 Console.WriteLine("*****Redis connection: " + redisConnection);
-// Nếu bạn cần cache sau này:
-// builder.Services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
+// Đăng ký Redis làm Distributed Cache
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnection;
+});
+//khi bạn inject IDistributedCache vào bất kỳ class nào trong ứng dụng,
+//ASP.NET Core sẽ cung cấp một instance kết nối đến Redis server mà bạn đã cấu hình.
+try
+{
+    var connection = ConnectionMultiplexer.Connect(redisConnection);
+    Console.WriteLine("✅ Redis connected successfully!");
+}
+catch (RedisConnectionException ex)
+{
+    Console.WriteLine("❌ Redis connection failed: " + ex.Message);
+}
 
 //
 // === CORS ===
@@ -130,6 +145,19 @@ builder.Services.AddScoped<be_movie_booking.Repositories.IShowtimeRepository, be
 // === BUILD APP ===
 //
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MovieBookingDbContext>();
+    if (dbContext.Database.CanConnect())
+    {
+        Console.WriteLine("✅ Database connection successful!");
+    }
+    else
+    {
+        Console.WriteLine("❌ Database connection failed!");
+    }
+}
 
 //
 // === MIDDLEWARE PIPELINE ===
