@@ -4,25 +4,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DotNetEnv;
-using StackExchange.Redis;
 
-//
-// === LOAD ENV FILE ===
-//
-if (Environment.GetEnvironmentVariable("RENDER") == "true")
-{
-    Console.WriteLine("Running inside Render — using injected environment variables.");
-}
-else if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-{
-    Env.Load(".env.docker");
-    Console.WriteLine("Loaded .env.docker");
-}
-else
-{
-    Env.Load(".env.local");
-    Console.WriteLine("Loaded .env.local");
-}
+// Load config/env
+LoadEnvironmentConfig();
 
 //
 // === APP BUILDER ===
@@ -53,23 +37,14 @@ Console.WriteLine("*****Connection string: " + connectionString);
 // === REDIS ===
 //
 var redisConnection = builder.Configuration.GetValue<string>("Redis:Connection");
-Console.WriteLine("*****Redis connection: " + redisConnection);
 // Đăng ký Redis làm Distributed Cache
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = redisConnection;
 });
+Console.WriteLine("*****Redis connection: " + redisConnection);
 //khi bạn inject IDistributedCache vào bất kỳ class nào trong ứng dụng,
 //ASP.NET Core sẽ cung cấp một instance kết nối đến Redis server mà bạn đã cấu hình.
-try
-{
-    var connection = ConnectionMultiplexer.Connect(redisConnection);
-    Console.WriteLine("✅ Redis connected successfully!");
-}
-catch (RedisConnectionException ex)
-{
-    Console.WriteLine("❌ Redis connection failed: " + ex.Message);
-}
 
 //
 // === CORS ===
@@ -146,18 +121,7 @@ builder.Services.AddScoped<be_movie_booking.Repositories.IShowtimeRepository, be
 //
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<MovieBookingDbContext>();
-    if (dbContext.Database.CanConnect())
-    {
-        Console.WriteLine("✅ Database connection successful!");
-    }
-    else
-    {
-        Console.WriteLine("❌ Database connection failed!");
-    }
-}
+// Detached explicit database connectivity check from startup. Use health endpoints instead.
 
 //
 // === MIDDLEWARE PIPELINE ===
@@ -167,7 +131,6 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
     app.UseOpenApi();    // Tạo /swagger/v1/swagger.json
     app.UseSwaggerUi();  // Hiển thị UI tại /swagger
-    Console.WriteLine("Swagger enabled in Development environment");
 }
 
 app.UseHttpsRedirection();
@@ -179,3 +142,23 @@ app.MapControllers();
 app.MapHub<be_movie_booking.Hubs.AppHub>("/hubs/app");
 
 app.Run();
+
+static void LoadEnvironmentConfig()
+{
+    // === LOAD ENV FILE ===
+    if (Environment.GetEnvironmentVariable("RENDER") == "true")
+    {
+        Console.WriteLine("Running inside Render — using injected environment variables.");
+        return;
+    }
+
+    if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+    {
+        Env.Load(".env.docker");
+        Console.WriteLine("Loaded .env.docker");
+        return;
+    }
+
+    Env.Load(".env.local");
+    Console.WriteLine("Loaded .env.local");
+}
