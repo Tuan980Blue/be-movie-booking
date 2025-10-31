@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DotNetEnv;
+using StackExchange.Redis;
 
 // Load config/env
 LoadEnvironmentConfig();
@@ -20,10 +21,7 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
 // 👇 Dùng NSwag để hiển thị Swagger UI (cách mới cho .NET 9)
-builder.Services.AddOpenApiDocument(config =>
-{
-    config.Title = "Movie Booking API";
-});
+builder.Services.AddOpenApiDocument(config => { config.Title = "Movie Booking API"; });
 
 //
 // === DATABASE ===
@@ -37,14 +35,13 @@ Console.WriteLine("*****Connection string: " + connectionString);
 // === REDIS ===
 //
 var redisConnection = builder.Configuration.GetValue<string>("Redis:Connection");
-// Đăng ký Redis làm Distributed Cache
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = redisConnection;
-});
 Console.WriteLine("*****Redis connection: " + redisConnection);
-//khi bạn inject IDistributedCache vào bất kỳ class nào trong ứng dụng,
-//ASP.NET Core sẽ cung cấp một instance kết nối đến Redis server mà bạn đã cấu hình.
+//tạo một instance của IConnectionMultiplexer
+var redis = ConnectionMultiplexer.Connect(redisConnection);
+//Nếu kết nối lỗi, nó sẽ ném ra một ngoại lệ
+Console.WriteLine($"Connected to Redis server at {redisConnection}");
+// Đăng ký IConnectionMultiplexer trong DI container
+builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 
 //
 // === CORS ===
@@ -105,16 +102,27 @@ builder.Services.AddScoped<be_movie_booking.Services.IPriceRuleService, be_movie
 builder.Services.AddScoped<be_movie_booking.Services.IPricingService, be_movie_booking.Services.PricingService>();
 builder.Services.AddScoped<be_movie_booking.Services.IShowtimeService, be_movie_booking.Services.ShowtimeService>();
 
-builder.Services.AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IRefreshTokenRepository, be_movie_booking.Repositories.RefreshTokenRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IMovieRepository, be_movie_booking.Repositories.MovieRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IGenreRepository, be_movie_booking.Repositories.GenreRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.ICinemaRepository, be_movie_booking.Repositories.CinemaRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IRoomRepository, be_movie_booking.Repositories.RoomRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.ISeatRepository, be_movie_booking.Repositories.SeatRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IPriceRuleRepository, be_movie_booking.Repositories.PriceRuleRepository>();
-builder.Services.AddScoped<be_movie_booking.Repositories.IShowtimeRepository, be_movie_booking.Repositories.ShowtimeRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IUserRepository, be_movie_booking.Repositories.UserRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IRefreshTokenRepository,
+        be_movie_booking.Repositories.RefreshTokenRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IMovieRepository, be_movie_booking.Repositories.MovieRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IGenreRepository, be_movie_booking.Repositories.GenreRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.ICinemaRepository, be_movie_booking.Repositories.CinemaRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IRoomRepository, be_movie_booking.Repositories.RoomRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.ISeatRepository, be_movie_booking.Repositories.SeatRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IPriceRuleRepository, be_movie_booking.Repositories.PriceRuleRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IShowtimeRepository, be_movie_booking.Repositories.ShowtimeRepository>();
 
 //
 // === BUILD APP ===
@@ -129,8 +137,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
-    app.UseOpenApi();    // Tạo /swagger/v1/swagger.json
-    app.UseSwaggerUi();  // Hiển thị UI tại /swagger
+    app.UseOpenApi(); // Tạo /swagger/v1/swagger.json
+    app.UseSwaggerUi(); // Hiển thị UI tại /swagger
 }
 
 app.UseHttpsRedirection();
