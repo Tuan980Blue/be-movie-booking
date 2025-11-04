@@ -101,6 +101,7 @@ builder.Services.AddScoped<be_movie_booking.Services.ISeatService, be_movie_book
 builder.Services.AddScoped<be_movie_booking.Services.IPriceRuleService, be_movie_booking.Services.PriceRuleService>();
 builder.Services.AddScoped<be_movie_booking.Services.IPricingService, be_movie_booking.Services.PricingService>();
 builder.Services.AddScoped<be_movie_booking.Services.IShowtimeService, be_movie_booking.Services.ShowtimeService>();
+builder.Services.AddScoped<be_movie_booking.Services.ISeatLockService, be_movie_booking.Services.SeatLockService>();
 
 builder.Services
     .AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();

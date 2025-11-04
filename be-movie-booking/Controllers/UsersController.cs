@@ -40,7 +40,7 @@ public class UsersController : ControllerBase
         {
             // Deserialize từ JSON
             var cachedUser = System.Text.Json.JsonSerializer.Deserialize<UserReadDto>(cachedUserBytes);
-            Console.WriteLine("Retrieved user from cache.");
+            Console.WriteLine($"Retrived user from Redis cache with id {sub}.");
             return Ok(cachedUser);
         }
 
