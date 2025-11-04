@@ -124,6 +124,8 @@ builder.Services
     .AddScoped<be_movie_booking.Repositories.IPriceRuleRepository, be_movie_booking.Repositories.PriceRuleRepository>();
 builder.Services
     .AddScoped<be_movie_booking.Repositories.IShowtimeRepository, be_movie_booking.Repositories.ShowtimeRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.ISeatLockRepository, be_movie_booking.Repositories.SeatLockRepository>();
 
 //
 // === BUILD APP ===
