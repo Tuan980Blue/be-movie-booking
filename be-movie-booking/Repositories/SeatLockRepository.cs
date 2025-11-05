@@ -5,9 +5,12 @@ namespace be_movie_booking.Repositories;
 
 public interface ISeatLockRepository
 {
-    Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> LockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds, TimeSpan lockDuration);
+    Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> LockSeatsAsync(Guid showtimeId, Guid userId,
+            IEnumerable<Guid> seatIds, TimeSpan lockDuration);
+    Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> ChangeTimeLockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds, TimeSpan newLockDuration);
     Task<List<Guid>> UnlockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds);
     Task<List<Guid>> GetLockedSeatsAsync(Guid showtimeId);
+    Task<List<Guid>> GetUserLockedSeatsAsync(Guid showtimeId, Guid userId);
 }
 
 public class SeatLockRepository : ISeatLockRepository
@@ -32,7 +35,8 @@ public class SeatLockRepository : ISeatLockRepository
     private string GetSeatIndexKey(Guid showtimeId, Guid seatId)
         => $"seat_index:showtime:{showtimeId}:seat:{seatId}";
 
-    public async Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> LockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds, TimeSpan lockDuration)
+    public async Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> LockSeatsAsync(Guid showtimeId, Guid userId,
+        IEnumerable<Guid> seatIds, TimeSpan lockDuration)
     {
         var redisKey = GetRedisKey(showtimeId, userId);
         var lockedSeatIds = new List<Guid>();
@@ -63,6 +67,54 @@ public class SeatLockRepository : ISeatLockRepository
         return (lockedSeatIds, expiresAt);
     }
 
+    //Thay đổi thời gian khóa ghế khi người dùng đang trong quá trình thanh toán
+    public async Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> ChangeTimeLockSeatsAsync(
+        Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds, TimeSpan newLockDuration)
+    {
+        var redisKey = GetRedisKey(showtimeId, userId);
+        var lockedSeatIds = new List<Guid>();
+        var expiresAt = DateTime.UtcNow.Add(newLockDuration);
+
+        foreach (var seatId in seatIds)
+        {
+            var seatIndexKey = GetSeatIndexKey(showtimeId, seatId);
+            var existingUser = await _db.StringGetAsync(seatIndexKey);
+
+            // Chỉ cho phép gia hạn nếu đúng user đang giữ ghế đó
+            if (existingUser.IsNullOrEmpty || existingUser != userId.ToString())
+                continue;
+
+            // Lấy lại thông tin cũ để cập nhật ExpiresAt
+            var hashValue = await _db.HashGetAsync(redisKey, seatId.ToString());
+            if (hashValue.IsNullOrEmpty)
+                continue;
+
+            var info = JsonSerializer.Deserialize<SeatLockInfo>(hashValue!);
+            if (info == null || info.UserId != userId)
+                continue;
+
+            // Cập nhật thời gian hết hạn
+            info.ExpiresAt = expiresAt;
+
+            // Ghi lại thông tin mới
+            await _db.HashSetAsync(redisKey, seatId.ToString(), JsonSerializer.Serialize(info));
+
+            // Gia hạn TTL cho seat index key
+            await _db.KeyExpireAsync(seatIndexKey, newLockDuration);
+
+            lockedSeatIds.Add(seatId);
+        }
+
+        if (lockedSeatIds.Count > 0)
+        {
+            // Gia hạn TTL cho key chứa danh sách ghế
+            await _db.KeyExpireAsync(redisKey, newLockDuration);
+        }
+
+        return (lockedSeatIds, expiresAt);
+    }
+
+
     public async Task<List<Guid>> UnlockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds)
     {
         var redisKey = GetRedisKey(showtimeId, userId);
@@ -84,6 +136,7 @@ public class SeatLockRepository : ISeatLockRepository
         return unlockedSeatIds;
     }
 
+    //Lấy danh sách tất cả ghế đã bị khóa cho một suất chiếu
     public async Task<List<Guid>> GetLockedSeatsAsync(Guid showtimeId)
     {
         var server = _db.Multiplexer.GetServer(_db.Multiplexer.GetEndPoints().First());
@@ -103,5 +156,27 @@ public class SeatLockRepository : ISeatLockRepository
         }
 
         return lockedSeatIds.ToList();
+    }
+
+    //Lấy danh sách ghế đã bị khóa bởi người dùng cụ thể cho một suất chiếu
+    public async Task<List<Guid>> GetUserLockedSeatsAsync(Guid showtimeId, Guid userId)
+    {
+        var redisKey = GetRedisKey(showtimeId, userId);
+        var lockedSeatIds = new List<Guid>();
+
+        var allLocks = await _db.HashGetAllAsync(redisKey);
+        foreach (var item in allLocks)
+        {
+            if (Guid.TryParse(item.Name.ToString(), out var seatId))
+            {
+                var lockInfo = JsonSerializer.Deserialize<SeatLockInfo>(item.Value!);
+                if (lockInfo != null && lockInfo.UserId == userId && lockInfo.ExpiresAt > DateTime.UtcNow)
+                {
+                    lockedSeatIds.Add(seatId);
+                }
+            }
+        }
+
+        return lockedSeatIds;
     }
 }

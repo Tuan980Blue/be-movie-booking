@@ -8,6 +8,7 @@ namespace be_movie_booking.Services;
 public interface ISeatLockService
 {
     Task<SeatLockResultDto> LockSeatsAsync(SeatLockRequestDto dto);
+    Task<SeatLockResultDto> ChangeTimeLockSeatsAsync(SeatLockExtendRequestDto dto);
     Task<SeatLockResultDto> UnlockSeatsAsync(SeatUnlockRequestDto dto);
     Task<LockedSeatsResponseDto> GetLockedSeatsAsync(Guid showtimeId);
 }
@@ -16,7 +17,8 @@ public class SeatLockService : ISeatLockService
 {
     private readonly ISeatLockRepository _repository;
     private readonly IHubContext<AppHub> _hubContext;
-    private readonly TimeSpan _seatLockDuration = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _seatLockDuration = TimeSpan.FromMinutes(3);
+    private readonly TimeSpan _changeSeatLockPayment = TimeSpan.FromMinutes(5);
 
     public SeatLockService(ISeatLockRepository repository, IHubContext<AppHub> hubContext)
     {
@@ -57,7 +59,39 @@ public class SeatLockService : ISeatLockService
             ExpiresAt = expiresAt
         };
     }
+    
+    //Thêm phương thức để thay đổi thời gian khóa ghế khi người dùng đang trong quá trình thanh toán
+    public async Task<SeatLockResultDto> ChangeTimeLockSeatsAsync(SeatLockExtendRequestDto dto)
+    {
+        var userId = dto.UserId ?? Guid.Empty;
+        var (lockedSeatIds, expiresAt) = await _repository.ChangeTimeLockSeatsAsync(dto.ShowtimeId, userId, dto.SeatIds, _changeSeatLockPayment);   
+        if (lockedSeatIds.Count == 0)
+        {
+            return new SeatLockResultDto
+            {
+                Success = false,
+                Message = "No seats were extended.",
+                ShowtimeId = dto.ShowtimeId
+            };
+        }
+        await _hubContext.Clients.Group($"showtime-{dto.ShowtimeId}")
+            .SendAsync("SeatsLockUpdated", new
+            {
+                Action = "extend",
+                LockedSeatIds = lockedSeatIds,
+                ExpiresAt = expiresAt
+            });
 
+        return new SeatLockResultDto
+        {
+            Success = true,
+            Message = "Seats extended successfully.",
+            ShowtimeId = dto.ShowtimeId,
+            LockedSeatIds = lockedSeatIds,
+            ExpiresAt = expiresAt
+        };
+    }
+    
     public async Task<SeatLockResultDto> UnlockSeatsAsync(SeatUnlockRequestDto dto)
     {
         var userId = dto.UserId ?? Guid.Empty;
