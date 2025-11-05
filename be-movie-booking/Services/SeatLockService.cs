@@ -39,9 +39,14 @@ public class SeatLockService : ISeatLockService
             };
         }
 
-        // Broadcast thông tin tới tất cả client trong showtime
+        // Broadcast thông tin tới tất cả client trong showtime có danh sách ghế đã bị khóa
         await _hubContext.Clients.Group($"showtime-{dto.ShowtimeId}")
-            .SendAsync("SeatsLockUpdated");
+            .SendAsync("SeatsLockUpdated", new
+            {
+                Action = "lock",
+                LockedSeatIds = lockedSeatIds, 
+                ExpiresAt = expiresAt
+            });
 
         return new SeatLockResultDto
         {
@@ -69,7 +74,11 @@ public class SeatLockService : ISeatLockService
         }
 
         await _hubContext.Clients.Group($"showtime-{dto.ShowtimeId}")
-            .SendAsync("SeatsLockUpdated");
+            .SendAsync("SeatsLockUpdated", new
+            {
+                Action = "unlock",
+                UnlockedSeatIds = unlockedSeatIds
+            });
 
         return new SeatLockResultDto
         {
