@@ -46,6 +46,31 @@ public class SeatLocksController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+    /// <summary>
+    /// Thay đổi thời gian khóa ghế khi người dùng đang trong quá trình thanh toán
+    /// </summary>
+    [Authorize]
+    [HttpPost("change-ttl")]
+    public async Task<IActionResult> ChangeTimeLockSeats([FromBody] SeatLockExtendRequestDto requestDto)
+    {
+        //lấy userId từ claim nếu có
+        var sub = User?.Claims
+                      ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
+                      ?.Value
+                  ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                      ?.Value;
+        if (sub == null) return Unauthorized(); 
+        requestDto.UserId =  Guid.Parse(sub);
+        try
+        {
+            var result = await _seatLockService.ChangeTimeLockSeatsAsync(requestDto);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
     /// <summary>
     /// Mở khóa ghế ngồi

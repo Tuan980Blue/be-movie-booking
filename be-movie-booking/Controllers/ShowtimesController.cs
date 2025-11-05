@@ -75,6 +75,15 @@ public class ShowtimesController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách ghế đã được đặt (Confirmed) theo suất chiếu
+    /// </summary>
+    [HttpGet("{id}/booked-seats")]
+    // public async Task<IActionResult> GetBookedSeats([FromRoute] Guid id)
+    // {
+    //     
+    // }
+
+    /// <summary>
     /// Tạo suất chiếu mới (Admin/Manager only)
     /// </summary>
     [Authorize(Roles = "Admin,Manager")]

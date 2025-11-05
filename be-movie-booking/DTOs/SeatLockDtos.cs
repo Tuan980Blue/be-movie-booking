@@ -14,6 +14,18 @@ public class SeatLockRequestDto
     public Guid? UserId { get; set; }
 }
 
+public class SeatLockExtendRequestDto
+{
+    [Required]
+    public Guid ShowtimeId { get; set; }
+
+    [Required]
+    [MinLength(1)]
+    public IEnumerable<Guid> SeatIds { get; set; } = Array.Empty<Guid>();
+
+    public Guid? UserId { get; set; }
+}
+
 public class SeatLockInfo
 {
     public Guid UserId { get; set; }
