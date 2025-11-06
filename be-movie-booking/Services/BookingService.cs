@@ -13,7 +13,7 @@ public interface IBookingService
     Task<BookingResponseDto?> CreateAsync(CreateBookingDto dto, Guid? userId, CancellationToken ct = default);
     Task<BookingResponseDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<BookingResponseDto?> GetByCodeAsync(string code, CancellationToken ct = default);
-    Task<PagedResult<BookingResponseDto>> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default);
+    Task<BookingListLightResultDto> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default);
     Task<BookingResponseDto?> ConfirmAsync(Guid bookingId, Guid paymentId, CancellationToken ct = default);
     Task<BookingResponseDto?> CancelAsync(Guid bookingId, string? reason, CancellationToken ct = default);
 }
@@ -23,6 +23,7 @@ public interface IBookingService
 /// </summary>
 public class BookingService : IBookingService
 {
+    private IUserService _userService;
     private readonly IBookingRepository _bookingRepository;
     private readonly IShowtimeRepository _showtimeRepository;
     private readonly ISeatRepository _seatRepository;
@@ -30,12 +31,14 @@ public class BookingService : IBookingService
     private readonly IPricingService _pricingService;
 
     public BookingService(
+        IUserService userService,
         IBookingRepository bookingRepository,
         IShowtimeRepository showtimeRepository,
         ISeatRepository seatRepository,
         ISeatLockService seatLockService,
         IPricingService pricingService)
     {
+        _userService = userService;
         _bookingRepository = bookingRepository;
         _showtimeRepository = showtimeRepository;
         _seatRepository = seatRepository;
@@ -45,11 +48,29 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponseDto?> CreateAsync(CreateBookingDto dto, Guid? userId, CancellationToken ct = default)
     {
+        //Thông tin liên hệ khách hàng truy vấn từ UserService nếu userId != null
+        string? customerContactJson = null;
+        if (userId.HasValue)
+        {
+            var user = await _userService.GetByIdAsync(userId.Value, ct);
+            if (user != null)
+            {
+                Console.WriteLine("Data User" + user);
+                var customerInfo = new CustomerInfoDto
+                {
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Phone = user.Phone
+                };
+                customerContactJson = JsonSerializer.Serialize(customerInfo);
+            }
+        }
+        
         // 1. Validate showtime exists
         var showtime = await _showtimeRepository.GetByIdWithDetailsAsync(dto.ShowtimeId, ct);
         if (showtime == null)
         {
-            throw new ArgumentException("Showtime không tồn tại");
+            throw new ArgumentException("Suất chiếu không tồn tại");
         }
 
         // 2. Validate showtime hasn't started
@@ -75,14 +96,25 @@ public class BookingService : IBookingService
             throw new ArgumentException("Một hoặc nhiều ghế không còn hoạt động");
         }
 
-        // 4. Kiểm tra ghế đã được đặt chưa
+        // 4. Kiểm tra ghế đã được lock bởi user này chưa (bắt buộc phải lock trước khi booking)
+        if (userId.HasValue)
+        {
+            var userLockedSeats = await _seatLockService.GetUserLockedSeatsAsync(dto.ShowtimeId, userId.Value);
+            var missingLocks = dto.SeatIds.Except(userLockedSeats).ToList();
+            if (missingLocks.Any())
+            {
+                throw new InvalidOperationException($"Một hoặc nhiều ghế chưa được khóa. Vui lòng khóa ghế trước khi đặt vé.");
+            }
+        }
+
+        // 5. Kiểm tra ghế đã được đặt chưa (trong database)
         var areBooked = await _bookingRepository.AreSeatsBookedAsync(dto.ShowtimeId, dto.SeatIds, ct);
         if (areBooked)
         {
             throw new InvalidOperationException("Một hoặc nhiều ghế đã được đặt");
         }
 
-        // 5. Calculate total price for each seat using PricingService
+        // 6. Calculate total price for each seat using PricingService
         var (bookingItems, totalAmount) = await CalculateBookingItemsAndTotalAsync(
             dto.ShowtimeId, 
             seats, 
@@ -92,18 +124,10 @@ public class BookingService : IBookingService
         {
             throw new InvalidOperationException("Không thể tính giá cho tất cả ghế");
         }
-        
-        if (totalAmount <= 0)
-        {
-            throw new InvalidOperationException("Tổng tiền phải lớn hơn 0");
-        }
 
-        // 6. Generate unique booking code
+        // 7. Generate unique booking code
         var bookingCode = await _bookingRepository.GenerateUniqueBookingCodeAsync(ct);
-
-        // 7. Serialize customer info
-        var customerContactJson = JsonSerializer.Serialize(dto.CustomerInfo);
-
+        
         // 8. Create booking
         var booking = new Booking
         {
@@ -134,12 +158,12 @@ public class BookingService : IBookingService
         return booking == null ? null : MapToDto(booking);
     }
 
-    public async Task<PagedResult<BookingResponseDto>> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default)
+    public async Task<BookingListLightResultDto> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default)
     {
-        var (bookings, total) = await _bookingRepository.ListAsync(searchDto, ct);
-        return new PagedResult<BookingResponseDto>
+        var (items, total) = await _bookingRepository.ListAsync(searchDto, ct);
+        return new BookingListLightResultDto
         {
-            Items = bookings.Select(MapToDto).ToList(),
+            Items = items,
             Page = searchDto.Page,
             PageSize = searchDto.PageSize,
             TotalItems = total

@@ -132,36 +132,49 @@ public class BookingController : ControllerBase
             return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy thông tin booking" });
         }
     }
-
+    
     /// <summary>
-    /// Lấy danh sách bookings với phân trang
+    /// Lấy danh sách booking nhẹ dành cho người dùng hiện tại (me)
     /// </summary>
     [Authorize]
-    [HttpGet]
-    public async Task<IActionResult> List([FromQuery] BookingSearchDto searchDto)
+    [HttpGet("me")]
+    public async Task<IActionResult> ListMineLight([FromQuery] BookingSearchDto searchDto)
     {
         try
         {
-            // If not admin, only show user's own bookings
             var sub = User?.Claims
                           ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
                           ?.Value
                       ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
                           ?.Value;
-            var userId = sub != null ? Guid.Parse(sub) : Guid.Empty;
-            var isAdmin = User?.IsInRole("Admin") ?? false;
+            if (sub == null) return Unauthorized();
+            var userId = Guid.Parse(sub);
 
-            if (!isAdmin)
-            {
-                searchDto.UserId = userId;
-            }
-
+            searchDto.UserId = userId;
             var result = await _bookingService.ListAsync(searchDto);
             return Ok(result);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking" });
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking (me)" });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách booking nhẹ cho admin (tất cả)
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    public async Task<IActionResult> ListAdminLight([FromQuery] BookingSearchDto searchDto)
+    {
+        try
+        {
+            var result = await _bookingService.ListAsync(searchDto);
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking (admin)" });
         }
     }
 

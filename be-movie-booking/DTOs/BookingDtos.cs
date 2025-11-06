@@ -16,9 +16,6 @@ public class CreateBookingDto
     [MinLength(1, ErrorMessage = "Phải chọn ít nhất 1 ghế")]
     public List<Guid> SeatIds { get; set; } = new();
 
-    [Required(ErrorMessage = "Thông tin khách hàng là bắt buộc")]
-    public CustomerInfoDto CustomerInfo { get; set; } = null!;
-
     public string? PromotionCode { get; set; }
 }
 
@@ -31,10 +28,7 @@ public class CustomerInfoDto
     [Required(ErrorMessage = "Email là bắt buộc")]
     [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     public string Email { get; set; } = null!;
-
-    [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
-    [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
-    public string Phone { get; set; } = null!;
+    public string? Phone { get; set; }
 }
 
 /// <summary>

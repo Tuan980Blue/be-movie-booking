@@ -13,7 +13,7 @@ public interface IBookingRepository
     Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<Booking?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default);
     Task<Booking?> GetByCodeAsync(string code, CancellationToken ct = default);
-    Task<(List<Booking> bookings, int total)> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default);
+    Task<(List<be_movie_booking.DTOs.BookingListItemDto> items, int total)> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default);
     Task<Booking?> AddAsync(Booking booking, CancellationToken ct = default);
     Task<Booking?> UpdateAsync(Booking booking, CancellationToken ct = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
@@ -85,67 +85,65 @@ public class BookingRepository : IBookingRepository
             .FirstOrDefaultAsync(b => b.Code == code, ct);
     }
 
-    public async Task<(List<Booking> bookings, int total)> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default)
+    public async Task<(List<be_movie_booking.DTOs.BookingListItemDto> items, int total)> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default)
     {
-        var query = _db.Bookings
-            .Include(b => b.User)
-            .Include(b => b.Items)
-                .ThenInclude(i => i.Showtime)
-                    .ThenInclude(s => s.Movie)
-            .Include(b => b.Items)
-                .ThenInclude(i => i.Showtime)
-                    .ThenInclude(s => s.Room)
-                        .ThenInclude(r => r.Cinema)
-            .Include(b => b.Items)
-                .ThenInclude(i => i.Seat)
-            .AsQueryable();
+        var q = _db.Bookings.AsQueryable();
 
-        // Apply filters
         if (searchDto.UserId.HasValue)
         {
-            query = query.Where(b => b.UserId == searchDto.UserId.Value);
+            q = q.Where(b => b.UserId == searchDto.UserId.Value);
         }
-
         if (searchDto.Status.HasValue)
         {
-            query = query.Where(b => b.Status == searchDto.Status.Value);
+            q = q.Where(b => b.Status == searchDto.Status.Value);
         }
-
         if (searchDto.DateFrom.HasValue)
         {
-            query = query.Where(b => b.CreatedAt >= searchDto.DateFrom.Value);
+            q = q.Where(b => b.CreatedAt >= searchDto.DateFrom.Value);
         }
-
         if (searchDto.DateTo.HasValue)
         {
-            query = query.Where(b => b.CreatedAt <= searchDto.DateTo.Value);
+            q = q.Where(b => b.CreatedAt <= searchDto.DateTo.Value);
         }
 
-        // Get total count
-        var total = await query.CountAsync(ct);
+        var total = await q.CountAsync(ct);
 
-        // Apply sorting
-        query = searchDto.SortBy.ToLower() switch
+        q = searchDto.SortBy.ToLower() switch
         {
-            "code" => searchDto.SortOrder.ToLower() == "asc"
-                ? query.OrderBy(b => b.Code)
-                : query.OrderByDescending(b => b.Code),
-            "createdat" => searchDto.SortOrder.ToLower() == "asc"
-                ? query.OrderBy(b => b.CreatedAt)
-                : query.OrderByDescending(b => b.CreatedAt),
-            "status" => searchDto.SortOrder.ToLower() == "asc"
-                ? query.OrderBy(b => b.Status)
-                : query.OrderByDescending(b => b.Status),
-            _ => query.OrderByDescending(b => b.CreatedAt)
+            "code" => searchDto.SortOrder.ToLower() == "asc" ? q.OrderBy(b => b.Code) : q.OrderByDescending(b => b.Code),
+            "createdat" => searchDto.SortOrder.ToLower() == "asc" ? q.OrderBy(b => b.CreatedAt) : q.OrderByDescending(b => b.CreatedAt),
+            "status" => searchDto.SortOrder.ToLower() == "asc" ? q.OrderBy(b => b.Status) : q.OrderByDescending(b => b.Status),
+            _ => q.OrderByDescending(b => b.CreatedAt)
         };
 
-        // Apply pagination
-        var bookings = await query
+        var items = await q
             .Skip((searchDto.Page - 1) * searchDto.PageSize)
             .Take(searchDto.PageSize)
+            .Select(b => new be_movie_booking.DTOs.BookingListItemDto
+            {
+                Id = b.Id,
+                Code = b.Code,
+                Currency = b.Currency,
+                TotalAmountMinor = b.TotalAmountMinor,
+                Status = b.Status,
+                CreatedAt = b.CreatedAt,
+                SeatsCount = b.Items.Count,
+                MovieTitle = b.Items
+                    .OrderBy(i => i.CreatedAt)
+                    .Select(i => i.Showtime.Movie.Title)
+                    .FirstOrDefault(),
+                StartUtc = b.Items
+                    .OrderBy(i => i.CreatedAt)
+                    .Select(i => i.Showtime.StartUtc)
+                    .FirstOrDefault(),
+                CinemaName = b.Items
+                    .OrderBy(i => i.CreatedAt)
+                    .Select(i => i.Showtime.Room.Cinema.Name)
+                    .FirstOrDefault()
+            })
             .ToListAsync(ct);
 
-        return (bookings, total);
+        return (items, total);
     }
 
     public async Task<Booking?> AddAsync(Booking booking, CancellationToken ct = default)
@@ -170,11 +168,13 @@ public class BookingRepository : IBookingRepository
 
     public async Task<bool> AreSeatsBookedAsync(Guid showtimeId, List<Guid> seatIds, CancellationToken ct = default)
     {
-        // Check if any of these seats are already booked (confirmed) for this showtime
+        // Mục đích: Kiểm tra xem có bất kỳ ghế nào trong danh sách đã được đặt cho suất chiếu cụ thể không
+        var blockingStatuses = new[] { BookingItemStatus.Pending, BookingItemStatus.Confirmed };
+
         var bookedSeats = await _db.BookingItems
             .Where(item => item.ShowtimeId == showtimeId
                 && seatIds.Contains(item.SeatId)
-                && item.Status == BookingItemStatus.Confirmed)
+                && blockingStatuses.Contains(item.Status))
             .Select(item => item.SeatId)
             .ToListAsync(ct);
 
