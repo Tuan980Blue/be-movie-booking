@@ -4,8 +4,6 @@ namespace be_movie_booking.DTOs;
 
 public class PriceRuleCreateDto
 {
-    public Guid? CinemaId { get; set; }
-    public DayType DayType { get; set; }
     public SeatType SeatType { get; set; }
     public int PriceMinor { get; set; }
     public bool IsActive { get; set; } = true;
@@ -14,8 +12,6 @@ public class PriceRuleCreateDto
 public class PriceRuleUpdateDto
 {
     public Guid Id { get; set; }
-    public Guid? CinemaId { get; set; }
-    public DayType DayType { get; set; }
     public SeatType SeatType { get; set; }
     public int PriceMinor { get; set; }
     public bool IsActive { get; set; } = true;
@@ -23,8 +19,6 @@ public class PriceRuleUpdateDto
 
 public class PriceRuleSearchDto
 {
-    public Guid? CinemaId { get; set; }
-    public DayType? DayType { get; set; }
     public SeatType? SeatType { get; set; }
     public bool? IsActive { get; set; }
     public int Page { get; set; } = 1;
@@ -34,8 +28,6 @@ public class PriceRuleSearchDto
 public class PriceRuleResponseDto
 {
     public Guid Id { get; set; }
-    public Guid? CinemaId { get; set; }
-    public DayType DayType { get; set; }
     public SeatType SeatType { get; set; }
     public int PriceMinor { get; set; }
     public bool IsActive { get; set; }
@@ -43,22 +35,33 @@ public class PriceRuleResponseDto
     public DateTime? UpdatedAt { get; set; }
 }
 
+/// <summary>
+/// DTO để tính giá cho nhiều ghế - chỉ cần SeatIds
+/// </summary>
 public class PricingQuoteRequestDto
 {
-    public Guid ShowtimeId { get; set; }
-    public Guid SeatId { get; set; }
+    public List<Guid> SeatIds { get; set; } = new();
 }
 
+/// <summary>
+/// Response DTO cho một ghế
+/// </summary>
+public class PricingQuoteItemDto
+{
+    public Guid SeatId { get; set; }
+    public SeatType SeatType { get; set; }
+    public int PriceMinor { get; set; }
+}
+
+/// <summary>
+/// Response DTO cho nhiều ghế
+/// </summary>
 public class PricingQuoteResponseDto
 {
-    public Guid ShowtimeId { get; set; }
-    public Guid SeatId { get; set; }
-    public int PriceMinor { get; set; }
+    public List<PricingQuoteItemDto> Quotes { get; set; } = new();
+    public int TotalAmountMinor { get; set; }
     public string Currency { get; set; } = "VND";
-    public DayType DayType { get; set; }
-    public SeatType SeatType { get; set; }
-    public Guid CinemaId { get; set; }
-    public bool UsedGlobalRule { get; set; }
 }
+
 
 

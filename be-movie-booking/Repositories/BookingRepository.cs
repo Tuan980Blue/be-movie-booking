@@ -1,0 +1,219 @@
+﻿using be_movie_booking.Data;
+using be_movie_booking.DTOs;
+using be_movie_booking.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace be_movie_booking.Repositories;
+
+/// <summary>
+/// Interface cho Booking Repository
+/// </summary>
+public interface IBookingRepository
+{
+    Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<Booking?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default);
+    Task<Booking?> GetByCodeAsync(string code, CancellationToken ct = default);
+    Task<(List<Booking> bookings, int total)> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default);
+    Task<Booking?> AddAsync(Booking booking, CancellationToken ct = default);
+    Task<Booking?> UpdateAsync(Booking booking, CancellationToken ct = default);
+    Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
+    Task<bool> AreSeatsBookedAsync(Guid showtimeId, List<Guid> seatIds, CancellationToken ct = default);
+    Task<string> GenerateUniqueBookingCodeAsync(CancellationToken ct = default);
+    Task<string> GenerateUniqueTicketCodeAsync(CancellationToken ct = default);
+}
+
+/// <summary>
+/// Repository để xử lý data access cho Booking
+/// </summary>
+public class BookingRepository : IBookingRepository
+{
+    private readonly MovieBookingDbContext _db;
+
+    public BookingRepository(MovieBookingDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<Booking?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Movie)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Room)
+                        .ThenInclude(r => r.Cinema)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Seat)
+            .Include(b => b.Tickets)
+            .FirstOrDefaultAsync(b => b.Id == id, ct);
+    }
+
+    public async Task<Booking?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Movie)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Room)
+                        .ThenInclude(r => r.Cinema)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Seat)
+            .Include(b => b.Tickets)
+            .FirstOrDefaultAsync(b => b.Id == id, ct);
+    }
+
+    public async Task<Booking?> GetByCodeAsync(string code, CancellationToken ct = default)
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Movie)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Room)
+                        .ThenInclude(r => r.Cinema)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Seat)
+            .Include(b => b.Tickets)
+            .FirstOrDefaultAsync(b => b.Code == code, ct);
+    }
+
+    public async Task<(List<Booking> bookings, int total)> ListAsync(BookingSearchDto searchDto, CancellationToken ct = default)
+    {
+        var query = _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Movie)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Showtime)
+                    .ThenInclude(s => s.Room)
+                        .ThenInclude(r => r.Cinema)
+            .Include(b => b.Items)
+                .ThenInclude(i => i.Seat)
+            .AsQueryable();
+
+        // Apply filters
+        if (searchDto.UserId.HasValue)
+        {
+            query = query.Where(b => b.UserId == searchDto.UserId.Value);
+        }
+
+        if (searchDto.Status.HasValue)
+        {
+            query = query.Where(b => b.Status == searchDto.Status.Value);
+        }
+
+        if (searchDto.DateFrom.HasValue)
+        {
+            query = query.Where(b => b.CreatedAt >= searchDto.DateFrom.Value);
+        }
+
+        if (searchDto.DateTo.HasValue)
+        {
+            query = query.Where(b => b.CreatedAt <= searchDto.DateTo.Value);
+        }
+
+        // Get total count
+        var total = await query.CountAsync(ct);
+
+        // Apply sorting
+        query = searchDto.SortBy.ToLower() switch
+        {
+            "code" => searchDto.SortOrder.ToLower() == "asc"
+                ? query.OrderBy(b => b.Code)
+                : query.OrderByDescending(b => b.Code),
+            "createdat" => searchDto.SortOrder.ToLower() == "asc"
+                ? query.OrderBy(b => b.CreatedAt)
+                : query.OrderByDescending(b => b.CreatedAt),
+            "status" => searchDto.SortOrder.ToLower() == "asc"
+                ? query.OrderBy(b => b.Status)
+                : query.OrderByDescending(b => b.Status),
+            _ => query.OrderByDescending(b => b.CreatedAt)
+        };
+
+        // Apply pagination
+        var bookings = await query
+            .Skip((searchDto.Page - 1) * searchDto.PageSize)
+            .Take(searchDto.PageSize)
+            .ToListAsync(ct);
+
+        return (bookings, total);
+    }
+
+    public async Task<Booking?> AddAsync(Booking booking, CancellationToken ct = default)
+    {
+        await _db.Bookings.AddAsync(booking, ct);
+        await _db.SaveChangesAsync(ct);
+        return booking;
+    }
+
+    public async Task<Booking?> UpdateAsync(Booking booking, CancellationToken ct = default)
+    {
+        booking.UpdatedAt = DateTime.UtcNow;
+        _db.Bookings.Update(booking);
+        await _db.SaveChangesAsync(ct);
+        return booking;
+    }
+
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _db.Bookings.AnyAsync(b => b.Id == id, ct);
+    }
+
+    public async Task<bool> AreSeatsBookedAsync(Guid showtimeId, List<Guid> seatIds, CancellationToken ct = default)
+    {
+        // Check if any of these seats are already booked (confirmed) for this showtime
+        var bookedSeats = await _db.BookingItems
+            .Where(item => item.ShowtimeId == showtimeId
+                && seatIds.Contains(item.SeatId)
+                && item.Status == BookingItemStatus.Confirmed)
+            .Select(item => item.SeatId)
+            .ToListAsync(ct);
+
+        return bookedSeats.Any();
+    }
+
+    public async Task<string> GenerateUniqueBookingCodeAsync(CancellationToken ct = default)
+    {
+        string code;
+        bool exists;
+        do
+        {
+            // Generate 8-character alphanumeric code
+            code = GenerateRandomCode(8);
+            exists = await _db.Bookings.AnyAsync(b => b.Code == code, ct);
+        } while (exists);
+
+        return code;
+    }
+
+    public async Task<string> GenerateUniqueTicketCodeAsync(CancellationToken ct = default)
+    {
+        string code;
+        bool exists;
+        do
+        {
+            // Generate 10-character alphanumeric code
+            code = GenerateRandomCode(10);
+            exists = await _db.Tickets.AnyAsync(t => t.TicketCode == code, ct);
+        } while (exists);
+
+        return code;
+    }
+
+    private static string GenerateRandomCode(int length)
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Exclude similar-looking characters
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, length)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+}

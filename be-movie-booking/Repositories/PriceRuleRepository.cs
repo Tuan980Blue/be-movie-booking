@@ -12,7 +12,7 @@ public interface IPriceRuleRepository
     Task<PriceRule?> AddAsync(PriceRule rule, CancellationToken ct = default);
     Task<PriceRule?> UpdateAsync(PriceRule rule, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
-    Task<PriceRule?> FindByKeyAsync(Guid? cinemaId, DayType dayType, SeatType seatType, CancellationToken ct = default);
+    Task<PriceRule?> FindBySeatTypeAsync(SeatType seatType, CancellationToken ct = default);
 }
 
 public class PriceRuleRepository : IPriceRuleRepository
@@ -33,19 +33,6 @@ public class PriceRuleRepository : IPriceRuleRepository
     {
         var q = _db.PriceRules.AsQueryable();
 
-        if (search.CinemaId.HasValue)
-        {
-            q = q.Where(x => x.CinemaId == search.CinemaId);
-        }
-        else
-        {
-            // keep both global and all cinemas when null
-        }
-
-        if (search.DayType.HasValue)
-        {
-            q = q.Where(x => x.DayType == search.DayType.Value);
-        }
         if (search.SeatType.HasValue)
         {
             q = q.Where(x => x.SeatType == search.SeatType.Value);
@@ -58,9 +45,7 @@ public class PriceRuleRepository : IPriceRuleRepository
         var total = await q.CountAsync(ct);
 
         var items = await q
-            .OrderBy(x => x.CinemaId)
-            .ThenBy(x => x.DayType)
-            .ThenBy(x => x.SeatType)
+            .OrderBy(x => x.SeatType)
             .Skip((search.Page - 1) * search.PageSize)
             .Take(search.PageSize)
             .ToListAsync(ct);
@@ -91,8 +76,8 @@ public class PriceRuleRepository : IPriceRuleRepository
         return true;
     }
 
-    public Task<PriceRule?> FindByKeyAsync(Guid? cinemaId, DayType dayType, SeatType seatType, CancellationToken ct = default)
+    public Task<PriceRule?> FindBySeatTypeAsync(SeatType seatType, CancellationToken ct = default)
     {
-        return _db.PriceRules.FirstOrDefaultAsync(x => x.CinemaId == cinemaId && x.DayType == dayType && x.SeatType == seatType && x.IsActive, ct);
+        return _db.PriceRules.FirstOrDefaultAsync(x => x.SeatType == seatType && x.IsActive, ct);
     }
 }

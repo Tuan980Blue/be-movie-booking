@@ -333,14 +333,8 @@ namespace be_movie_booking.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("CinemaId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DayType")
-                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -356,11 +350,7 @@ namespace be_movie_booking.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DayType", "SeatType")
-                        .IsUnique()
-                        .HasFilter("\"CinemaId\" IS NULL");
-
-                    b.HasIndex("CinemaId", "DayType", "SeatType")
+                    b.HasIndex("SeatType")
                         .IsUnique();
 
                     b.ToTable("PriceRules");
@@ -847,15 +837,6 @@ namespace be_movie_booking.Migrations
                         .IsRequired();
 
                     b.Navigation("Payment");
-                });
-
-            modelBuilder.Entity("be_movie_booking.Models.PriceRule", b =>
-                {
-                    b.HasOne("be_movie_booking.Models.Cinema", "Cinema")
-                        .WithMany()
-                        .HasForeignKey("CinemaId");
-
-                    b.Navigation("Cinema");
                 });
 
             modelBuilder.Entity("be_movie_booking.Models.PromotionUsage", b =>
