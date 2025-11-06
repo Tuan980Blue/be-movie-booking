@@ -6,8 +6,11 @@ namespace be_movie_booking.Repositories;
 public interface ISeatLockRepository
 {
     Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> LockSeatsAsync(Guid showtimeId, Guid userId,
-            IEnumerable<Guid> seatIds, TimeSpan lockDuration);
-    Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> ChangeTimeLockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds, TimeSpan newLockDuration);
+        IEnumerable<Guid> seatIds, TimeSpan lockDuration);
+
+    Task<(List<Guid> lockedSeatIds, DateTime expiresAt)> ChangeTimeLockSeatsAsync(Guid showtimeId, Guid userId,
+        IEnumerable<Guid> seatIds, TimeSpan newLockDuration);
+
     Task<List<Guid>> UnlockSeatsAsync(Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds);
     Task<List<Guid>> GetLockedSeatsAsync(Guid showtimeId);
     Task<List<Guid>> GetUserLockedSeatsAsync(Guid showtimeId, Guid userId);
@@ -27,6 +30,8 @@ public class SeatLockRepository : ISeatLockRepository
         public Guid UserId { get; set; }
         public DateTime LockedAt { get; set; }
         public DateTime ExpiresAt { get; set; }
+
+        public Boolean IsExtended { get; set; } = false;
     }
 
     private string GetRedisKey(Guid showtimeId, Guid userId)
@@ -72,43 +77,69 @@ public class SeatLockRepository : ISeatLockRepository
         Guid showtimeId, Guid userId, IEnumerable<Guid> seatIds, TimeSpan newLockDuration)
     {
         var redisKey = GetRedisKey(showtimeId, userId);
-        var lockedSeatIds = new List<Guid>();
         var expiresAt = DateTime.UtcNow.Add(newLockDuration);
+        var seatIdList = seatIds.ToList();
 
-        foreach (var seatId in seatIds)
+        // --- Bước 1: Validate tất cả ghế ---
+        foreach (var seatId in seatIdList)
         {
             var seatIndexKey = GetSeatIndexKey(showtimeId, seatId);
             var existingUser = await _db.StringGetAsync(seatIndexKey);
-
-            // Chỉ cho phép gia hạn nếu đúng user đang giữ ghế đó
             if (existingUser.IsNullOrEmpty || existingUser != userId.ToString())
-                continue;
+            {
+                Console.WriteLine("Ghế không bị khóa bởi người dùng này hoặc không tồn tại.");
+                return (new List<Guid>(), DateTime.MinValue);
+            }
 
-            // Lấy lại thông tin cũ để cập nhật ExpiresAt
             var hashValue = await _db.HashGetAsync(redisKey, seatId.ToString());
             if (hashValue.IsNullOrEmpty)
-                continue;
+            {
+                Console.WriteLine("Không tìm thấy thông tin khóa ghế trong Redis.");
+                return (new List<Guid>(), DateTime.MinValue);
+            }
 
             var info = JsonSerializer.Deserialize<SeatLockInfo>(hashValue!);
             if (info == null || info.UserId != userId)
-                continue;
+            {
+                Console.WriteLine("Thông tin khóa ghế không hợp lệ.");
+                return (new List<Guid>(), DateTime.MinValue);
+            }
 
-            // Cập nhật thời gian hết hạn
-            info.ExpiresAt = expiresAt;
+            // Nếu ghế đã được gia hạn trước đó, không cho phép gia hạn tiếp
+            if (info.IsExtended)
+            {
+                Console.WriteLine("Ghế đã được gia hạn trước đó, không thể gia hạn tiếp.");
+                return (new List<Guid>(), DateTime.MinValue);
+            }
+        }
 
-            // Ghi lại thông tin mới
-            await _db.HashSetAsync(redisKey, seatId.ToString(), JsonSerializer.Serialize(info));
+        // --- Bước 2: Tất cả hợp lệ -> Thực hiện trong 1 transaction ---
+        var tran = _db.CreateTransaction();
+        var lockedSeatIds = new List<Guid>();
 
-            // Gia hạn TTL cho seat index key
-            await _db.KeyExpireAsync(seatIndexKey, newLockDuration);
+        foreach (var seatId in seatIdList)
+        {
+            var info = new SeatLockInfo
+            {
+                UserId = userId,
+                LockedAt = DateTime.UtcNow,
+                ExpiresAt = expiresAt,
+                IsExtended = true
+            };
 
+            var seatIndexKey = GetSeatIndexKey(showtimeId, seatId);
+            _ = tran.HashSetAsync(redisKey, seatId.ToString(), JsonSerializer.Serialize(info));
+            _ = tran.KeyExpireAsync(seatIndexKey, newLockDuration);
             lockedSeatIds.Add(seatId);
         }
 
-        if (lockedSeatIds.Count > 0)
+        _ = tran.KeyExpireAsync(redisKey, newLockDuration);
+
+        var committed = await tran.ExecuteAsync();
+        if (!committed)
         {
-            // Gia hạn TTL cho key chứa danh sách ghế
-            await _db.KeyExpireAsync(redisKey, newLockDuration);
+            Console.WriteLine("Transaction failed to commit.");
+            return (new List<Guid>(), DateTime.MinValue);
         }
 
         return (lockedSeatIds, expiresAt);
