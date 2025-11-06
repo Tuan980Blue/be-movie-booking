@@ -17,6 +17,9 @@ public interface IPriceRuleService
 
 public interface IPricingService
 {
+    /// <summary>
+    /// Tính giá cho nhiều ghế - chỉ cần SeatIds
+    /// </summary>
     Task<PricingQuoteResponseDto> QuoteAsync(PricingQuoteRequestDto request, CancellationToken ct = default);
 }
 
@@ -44,10 +47,6 @@ public class PriceRuleService : IPriceRuleService
     public async Task<PriceRuleResponseDto> CreateAsync(PriceRuleCreateDto dto, CancellationToken ct = default)
     {
         // Basic validation
-        if (!Enum.IsDefined(typeof(DayType), dto.DayType))
-        {
-            throw new ArgumentException("Invalid DayType");
-        }
         if (!Enum.IsDefined(typeof(SeatType), dto.SeatType))
         {
             throw new ArgumentException("Invalid SeatType");
@@ -57,18 +56,16 @@ public class PriceRuleService : IPriceRuleService
             throw new ArgumentException("PriceMinor must be greater than 0");
         }
 
-        // Validate uniqueness: (CinemaId, DayType, SeatType) unique; and global unique when CinemaId is null
-        var existed = await _repo.FindByKeyAsync(dto.CinemaId, dto.DayType, dto.SeatType, ct)
-                     ?? (dto.CinemaId == null ? await _repo.FindByKeyAsync(null, dto.DayType, dto.SeatType, ct) : null);
+        // Validate uniqueness: mỗi SeatType chỉ có 1 PriceRule
+        var existed = await _repo.FindBySeatTypeAsync(dto.SeatType, ct);
         if (existed != null)
         {
-            throw new InvalidOperationException("Quy định về giá đã tồn tại cho phạm vi, loại ngày và loại ghế nhất định");
+            throw new InvalidOperationException($"Quy định về giá cho loại ghế {dto.SeatType} đã tồn tại");
         }
+
         var entity = new PriceRule
         {
             Id = Guid.NewGuid(),
-            CinemaId = dto.CinemaId,
-            DayType = dto.DayType,
             SeatType = dto.SeatType,
             PriceMinor = dto.PriceMinor,
             IsActive = dto.IsActive
@@ -83,10 +80,6 @@ public class PriceRuleService : IPriceRuleService
         if (entity == null) return null;
 
         // Basic validation
-        if (!Enum.IsDefined(typeof(DayType), dto.DayType))
-        {
-            throw new ArgumentException("Invalid DayType");
-        }
         if (!Enum.IsDefined(typeof(SeatType), dto.SeatType))
         {
             throw new ArgumentException("Invalid SeatType");
@@ -96,19 +89,16 @@ public class PriceRuleService : IPriceRuleService
             throw new ArgumentException("PriceMinor must be greater than 0");
         }
 
-        // Validate uniqueness for target
-        if (entity.CinemaId != dto.CinemaId || entity.DayType != dto.DayType || entity.SeatType != dto.SeatType)
+        // Validate uniqueness for target SeatType
+        if (entity.SeatType != dto.SeatType)
         {
-            var existed = await _repo.FindByKeyAsync(dto.CinemaId, dto.DayType, dto.SeatType, ct)
-                         ?? (dto.CinemaId == null ? await _repo.FindByKeyAsync(null, dto.DayType, dto.SeatType, ct) : null);
+            var existed = await _repo.FindBySeatTypeAsync(dto.SeatType, ct);
             if (existed != null && existed.Id != id)
             {
-                throw new InvalidOperationException("Quy định về giá đã tồn tại cho phạm vi, loại ngày và loại ghế nhất định");
+                throw new InvalidOperationException($"Quy định về giá cho loại ghế {dto.SeatType} đã tồn tại");
             }
         }
 
-        entity.CinemaId = dto.CinemaId;
-        entity.DayType = dto.DayType;
         entity.SeatType = dto.SeatType;
         entity.PriceMinor = dto.PriceMinor;
         entity.IsActive = dto.IsActive;
@@ -128,8 +118,6 @@ public class PriceRuleService : IPriceRuleService
         return new PriceRuleResponseDto
         {
             Id = e.Id,
-            CinemaId = e.CinemaId,
-            DayType = e.DayType,
             SeatType = e.SeatType,
             PriceMinor = e.PriceMinor,
             IsActive = e.IsActive,
@@ -152,33 +140,51 @@ public class PricingService : IPricingService
 
     public async Task<PricingQuoteResponseDto> QuoteAsync(PricingQuoteRequestDto request, CancellationToken ct = default)
     {
-        var st = await _db.Showtimes.Include(x => x.Room).ThenInclude(r => r.Cinema)
-            .FirstOrDefaultAsync(x => x.Id == request.ShowtimeId, ct) ?? throw new KeyNotFoundException("Showtime not found");
-        var seat = await _db.Seats.FirstOrDefaultAsync(x => x.Id == request.SeatId, ct) ?? throw new KeyNotFoundException("Seat not found");
+        if (request.SeatIds == null || !request.SeatIds.Any())
+        {
+            throw new ArgumentException("Danh sách ghế không được trống");
+        }
 
-        var dayType = IsWeekend(st.StartUtc) ? DayType.Weekend : DayType.Weekday;
-        var cinemaId = st.Room.CinemaId;
+        // Lấy tất cả ghế cùng lúc
+        var seats = await _db.Seats
+            .Where(s => request.SeatIds.Contains(s.Id))
+            .ToListAsync(ct);
 
-        var rule = await _repo.FindByKeyAsync(cinemaId, dayType, seat.SeatType, ct)
-                   ?? await _repo.FindByKeyAsync(null, dayType, seat.SeatType, ct);
+        if (seats.Count != request.SeatIds.Count)
+        {
+            throw new KeyNotFoundException("Một số ghế không tồn tại");
+        }
 
-        var price = rule?.PriceMinor ?? st.BasePriceMinor;
+        // Load tất cả PriceRule để cache
+        var seatTypes = seats.Select(s => s.SeatType).Distinct().ToList();
+        var priceRules = await _db.PriceRules
+            .Where(pr => seatTypes.Contains(pr.SeatType) && pr.IsActive)
+            .ToListAsync(ct);
+
+        var quotes = new List<PricingQuoteItemDto>();
+        var totalAmount = 0;
+
+        foreach (var seat in seats)
+        {
+            var rule = priceRules.FirstOrDefault(r => r.SeatType == seat.SeatType)
+                ?? throw new InvalidOperationException($"Không tìm thấy quy định giá cho loại ghế {seat.SeatType}");
+
+            quotes.Add(new PricingQuoteItemDto
+            {
+                SeatId = seat.Id,
+                SeatType = seat.SeatType,
+                PriceMinor = rule.PriceMinor
+            });
+
+            totalAmount += rule.PriceMinor;
+        }
 
         return new PricingQuoteResponseDto
         {
-            ShowtimeId = st.Id,
-            SeatId = seat.Id,
-            PriceMinor = price,
-            Currency = "VND",
-            DayType = dayType,
-            SeatType = seat.SeatType,
-            CinemaId = cinemaId,
-            UsedGlobalRule = rule != null && rule.CinemaId == null
+            Quotes = quotes,
+            TotalAmountMinor = totalAmount,
+            Currency = "VND"
         };
     }
-
-    private static bool IsWeekend(DateTime utc)
-    {
-        return utc.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-    }
 }
+

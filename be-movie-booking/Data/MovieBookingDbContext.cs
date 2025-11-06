@@ -139,12 +139,7 @@ public class MovieBookingDbContext : DbContext
         modelBuilder.Entity<PriceRule>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasOne(x => x.Cinema).WithMany().HasForeignKey(x => x.CinemaId);
-            e.HasIndex(x => new { x.CinemaId, x.DayType, x.SeatType }).IsUnique();
-            // Đảm bảo Global (CinemaId IS NULL) chỉ có 1 bản ghi cho mỗi (DayType, SeatType)
-            e.HasIndex(x => new { x.DayType, x.SeatType })
-                .IsUnique()
-                .HasFilter("\"CinemaId\" IS NULL");
+            e.HasIndex(x => x.SeatType).IsUnique();
             e.Property(x => x.PriceMinor).IsRequired();
         });
 
