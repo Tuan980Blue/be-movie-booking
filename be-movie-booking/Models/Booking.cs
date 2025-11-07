@@ -26,6 +26,11 @@ public class Booking
     public User? User { get; set; }
 
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
+    
+    /// <summary>
+    /// QR code của booking (dùng BookingCode làm QR code)
+    /// </summary>
+    public string? BookingQr { get; set; }
 
     public int TotalAmountMinor { get; set; }
     public string Currency { get; set; } = "VND";
@@ -81,4 +86,14 @@ public class Ticket
 
     public TicketStatus Status { get; set; } = TicketStatus.Issued;
     public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
+    
+    /// <summary>
+    /// Thời gian check-in vé (null nếu chưa check-in)
+    /// </summary>
+    public DateTime? CheckedInAt { get; set; }
+    
+    /// <summary>
+    /// ID nhân viên thực hiện check-in (null nếu chưa check-in)
+    /// </summary>
+    public Guid? CheckedInBy { get; set; }
 }

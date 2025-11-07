@@ -82,6 +82,14 @@ public class BookingRepository : IBookingRepository
             .Include(b => b.Items)
                 .ThenInclude(i => i.Seat)
             .Include(b => b.Tickets)
+                .ThenInclude(t => t.Showtime)
+                    .ThenInclude(s => s.Movie)
+            .Include(b => b.Tickets)
+                .ThenInclude(t => t.Showtime)
+                    .ThenInclude(s => s.Room)
+                        .ThenInclude(r => r.Cinema)
+            .Include(b => b.Tickets)
+                .ThenInclude(t => t.Seat)
             .FirstOrDefaultAsync(b => b.Code == code, ct);
     }
 

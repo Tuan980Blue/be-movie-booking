@@ -103,6 +103,7 @@ builder.Services.AddScoped<be_movie_booking.Services.IPricingService, be_movie_b
 builder.Services.AddScoped<be_movie_booking.Services.IShowtimeService, be_movie_booking.Services.ShowtimeService>();
 builder.Services.AddScoped<be_movie_booking.Services.ISeatLockService, be_movie_booking.Services.SeatLockService>();
 builder.Services.AddScoped<be_movie_booking.Services.IBookingService, be_movie_booking.Services.BookingService>();
+builder.Services.AddScoped<be_movie_booking.Services.ITicketService, be_movie_booking.Services.TicketService>();
 
 builder.Services
     .AddScoped<be_movie_booking.Repositories.IAuthRepository, be_movie_booking.Repositories.AuthRepository>();
@@ -129,6 +130,10 @@ builder.Services
     .AddScoped<be_movie_booking.Repositories.ISeatLockRepository, be_movie_booking.Repositories.SeatLockRepository>();
 builder.Services
     .AddScoped<be_movie_booking.Repositories.IBookingRepository, be_movie_booking.Repositories.BookingRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.IBookingDraftRepository, be_movie_booking.Repositories.BookingDraftRepository>();
+builder.Services
+    .AddScoped<be_movie_booking.Repositories.ITicketRepository, be_movie_booking.Repositories.TicketRepository>();
 
 //
 // === BUILD APP ===

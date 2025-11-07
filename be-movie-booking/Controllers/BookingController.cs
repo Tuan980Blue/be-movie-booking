@@ -20,7 +20,7 @@ public class BookingController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo booking mới
+    /// Tạo booking mới (trả về draft đơn giản)
     /// </summary>
     [Authorize]
     [HttpPost]
@@ -42,8 +42,12 @@ public class BookingController : ControllerBase
                 return BadRequest(ModelState);
             }
 
-            var booking = await _bookingService.CreateAsync(dto, userId);
-            return CreatedAtAction(nameof(GetById), new { id = booking.Id }, booking);
+            var draft = await _bookingService.CreateAsync(dto, userId);
+            if (draft == null)
+            {
+                return StatusCode(500, new { message = "Không thể tạo booking draft" });
+            }
+            return CreatedAtAction(nameof(GetById), new { id = draft.Id }, draft);
         }
         catch (ArgumentException ex)
         {
