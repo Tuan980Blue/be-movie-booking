@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using be_movie_booking.Models;
-using System.Text.Json;
 
 namespace be_movie_booking.DTOs;
 
@@ -16,25 +15,7 @@ public class CreateBookingDto
     [MinLength(1, ErrorMessage = "Phải chọn ít nhất 1 ghế")]
     public List<Guid> SeatIds { get; set; } = new();
 
-    [Required(ErrorMessage = "Thông tin khách hàng là bắt buộc")]
-    public CustomerInfoDto CustomerInfo { get; set; } = null!;
-
     public string? PromotionCode { get; set; }
-}
-
-public class CustomerInfoDto
-{
-    [Required(ErrorMessage = "Họ tên là bắt buộc")]
-    [StringLength(200, ErrorMessage = "Họ tên không được vượt quá 200 ký tự")]
-    public string FullName { get; set; } = null!;
-
-    [Required(ErrorMessage = "Email là bắt buộc")]
-    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
-    public string Email { get; set; } = null!;
-
-    [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
-    [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
-    public string Phone { get; set; } = null!;
 }
 
 /// <summary>
@@ -64,6 +45,7 @@ public class BookingResponseDto
     public BookingStatus Status { get; set; }
     public int TotalAmountMinor { get; set; }
     public string Currency { get; set; } = "VND";
+    public string? BookingQr { get; set; }
     public CustomerInfoDto? CustomerInfo { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -71,13 +53,9 @@ public class BookingResponseDto
     public List<TicketResponseDto> Tickets { get; set; } = new();
 }
 
-public class UserInfoDto
-{
-    public Guid Id { get; set; }
-    public string Email { get; set; } = null!;
-    public string FullName { get; set; } = null!;
-}
-
+/// <summary>
+/// DTO để trả về booking item
+/// </summary>
 public class BookingItemResponseDto
 {
     public Guid Id { get; set; }
@@ -89,40 +67,6 @@ public class BookingItemResponseDto
     public string? PriceCategory { get; set; }
     public BookingItemStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
-}
-
-public class ShowtimeInfoDto
-{
-    public Guid Id { get; set; }
-    public Guid MovieId { get; set; }
-    public string MovieTitle { get; set; } = null!;
-    public Guid RoomId { get; set; }
-    public string RoomName { get; set; } = null!;
-    public Guid CinemaId { get; set; }
-    public string CinemaName { get; set; } = null!;
-    public DateTime StartUtc { get; set; }
-    public DateTime EndUtc { get; set; }
-    public string Language { get; set; } = null!;
-    public string Format { get; set; } = null!;
-}
-
-public class SeatInfoDto
-{
-    public Guid Id { get; set; }
-    public string RowLabel { get; set; } = null!;
-    public int SeatNumber { get; set; }
-    public SeatType SeatType { get; set; }
-}
-
-public class TicketResponseDto
-{
-    public Guid Id { get; set; }
-    public string TicketCode { get; set; } = null!;
-    public string? TicketQr { get; set; }
-    public Guid ShowtimeId { get; set; }
-    public Guid SeatId { get; set; }
-    public TicketStatus Status { get; set; }
-    public DateTime IssuedAt { get; set; }
 }
 
 /// <summary>

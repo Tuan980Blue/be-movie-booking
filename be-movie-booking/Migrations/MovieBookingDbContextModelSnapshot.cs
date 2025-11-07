@@ -28,6 +28,9 @@ namespace be_movie_booking.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BookingQr")
+                        .HasColumnType("text");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("text");
@@ -660,6 +663,12 @@ namespace be_movie_booking.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CheckedInAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CheckedInBy")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("IssuedAt")

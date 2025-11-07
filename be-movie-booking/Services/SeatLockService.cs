@@ -11,6 +11,7 @@ public interface ISeatLockService
     Task<SeatLockResultDto> ChangeTimeLockSeatsAsync(SeatLockExtendRequestDto dto);
     Task<SeatLockResultDto> UnlockSeatsAsync(SeatUnlockRequestDto dto);
     Task<LockedSeatsResponseDto> GetLockedSeatsAsync(Guid showtimeId);
+    Task<List<Guid>> GetUserLockedSeatsAsync(Guid showtimeId, Guid userId);
 }
 
 public class SeatLockService : ISeatLockService
@@ -130,5 +131,10 @@ public class SeatLockService : ISeatLockService
             ShowtimeId = showtimeId,
             LockedSeatIds = await _repository.GetLockedSeatsAsync(showtimeId)
         };
+    }
+
+    public async Task<List<Guid>> GetUserLockedSeatsAsync(Guid showtimeId, Guid userId)
+    {
+        return await _repository.GetUserLockedSeatsAsync(showtimeId, userId);
     }
 }

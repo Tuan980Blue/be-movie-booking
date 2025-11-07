@@ -71,7 +71,7 @@ public class SeatLocksController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
-
+    
     /// <summary>
     /// Mở khóa ghế ngồi
     /// </summary>
