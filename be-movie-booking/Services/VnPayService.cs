@@ -1,7 +1,4 @@
-﻿using System.Collections.Specialized;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
+﻿using be_movie_booking.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
@@ -59,112 +56,60 @@ public class VnPayService : IVnPayService
         // Convert to long integer
         var vnp_Amount = (long)amount;
 
-        // Build payment data dictionary
-        var vnpayData = new SortedDictionary<string, string>(StringComparer.Ordinal)
-        {
-            { "vnp_Version", "2.1.0" },
-            { "vnp_Command", "pay" },
-            { "vnp_TmnCode", _tmnCode },
-            { "vnp_Amount", vnp_Amount.ToString() },
-            { "vnp_CurrCode", "VND" },
-            { "vnp_TxnRef", orderId },
-            { "vnp_OrderInfo", orderDescription },
-            { "vnp_OrderType", "other" },
-            { "vnp_Locale", "vn" },
-            { "vnp_ReturnUrl", returnUrl },
-            { "vnp_IpAddr", ipAddress },
-            { "vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss") }
-        };
+        // Use VnPayLibrary to build payment URL
+        var vnpay = new VnPayLibrary();
+        
+        // Add all required VNPay parameters
+        vnpay.AddRequestData("vnp_Version", "2.1.0");
+        vnpay.AddRequestData("vnp_Command", "pay");
+        vnpay.AddRequestData("vnp_TmnCode", _tmnCode);
+        vnpay.AddRequestData("vnp_Amount", vnp_Amount.ToString());
+        vnpay.AddRequestData("vnp_CurrCode", "VND");
+        vnpay.AddRequestData("vnp_TxnRef", orderId);
+        vnpay.AddRequestData("vnp_OrderInfo", orderDescription);
+        vnpay.AddRequestData("vnp_OrderType", "other");
+        vnpay.AddRequestData("vnp_Locale", "vn");
+        vnpay.AddRequestData("vnp_ReturnUrl", returnUrl);
+        vnpay.AddRequestData("vnp_IpAddr", ipAddress);
+        vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
 
-        // Build query string
-        var queryString = new StringBuilder();
-        foreach (var kvp in vnpayData)
-        {
-            if (!string.IsNullOrEmpty(kvp.Value))
-            {
-                queryString.Append(WebUtility.UrlEncode(kvp.Key) + "=" + WebUtility.UrlEncode(kvp.Value) + "&");
-            }
-        }
-
-        // Remove trailing &
-        if (queryString.Length > 0)
-        {
-            queryString.Length--;
-        }
-
-        // Generate secure hash: append secret and compute SHA256
-        // VNPay pattern: queryString + "&" + hashSecret, then SHA256
-        var signData = queryString.ToString() + "&" + _hashSecret;
-        var vnp_SecureHash = ComputeSha256Hash(signData);
-
-        // Build final payment URL
-        return $"{_paymentUrl}?{queryString}&vnp_SecureHash={vnp_SecureHash}";
+        // Generate payment URL with secure hash
+        return vnpay.CreateRequestUrl(_paymentUrl, _hashSecret);
     }
 
     public bool ValidatePaymentResponse(IQueryCollection query)
     {
-        var vnp_SecureHash = query["vnp_SecureHash"].ToString();
-        if (string.IsNullOrEmpty(vnp_SecureHash))
-        {
-            return false;
-        }
-
-        // Extract all parameters except vnp_SecureHash and vnp_SecureHashType
-        var vnpayData = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        // Use VnPayLibrary to validate signature
+        var vnpay = new VnPayLibrary();
+        
+        // Add all response parameters from VNPay callback
         foreach (var kvp in query)
-        {
-            if (!string.IsNullOrEmpty(kvp.Value) && 
-                kvp.Key != "vnp_SecureHash" && 
-                kvp.Key != "vnp_SecureHashType")
-            {
-                vnpayData.Add(kvp.Key, kvp.Value.ToString());
-            }
-        }
-
-        // Build query string for hash calculation
-        var queryString = new StringBuilder();
-        foreach (var kvp in vnpayData)
         {
             if (!string.IsNullOrEmpty(kvp.Value))
             {
-                queryString.Append(WebUtility.UrlEncode(kvp.Key) + "=" + WebUtility.UrlEncode(kvp.Value) + "&");
+                vnpay.AddResponseData(kvp.Key, kvp.Value.ToString());
             }
         }
 
-        // Remove trailing &
-        if (queryString.Length > 0)
-        {
-            queryString.Length--;
-        }
-
-        // Generate hash and compare: append secret and compute SHA256
-        var signData = queryString.ToString() + "&" + _hashSecret;
-        var computedHash = ComputeSha256Hash(signData);
-
-        return computedHash.Equals(vnp_SecureHash, StringComparison.OrdinalIgnoreCase);
+        // Validate signature using VnPayLibrary
+        return vnpay.ValidateSignature(_hashSecret);
     }
 
     public Dictionary<string, string> GetResponseData(IQueryCollection query)
     {
-        var data = new Dictionary<string, string>();
+        // Use VnPayLibrary to extract response data
+        var vnpay = new VnPayLibrary();
+        
+        // Add all response parameters from VNPay callback
         foreach (var kvp in query)
         {
             if (!string.IsNullOrEmpty(kvp.Value))
             {
-                data[kvp.Key] = kvp.Value.ToString();
+                vnpay.AddResponseData(kvp.Key, kvp.Value.ToString());
             }
         }
-        return data;
-    }
 
-    /// <summary>
-    /// Computes SHA256 hash of the input string
-    /// VNPay uses: SHA256(queryString + "&" + hashSecret)
-    /// </summary>
-    private static string ComputeSha256Hash(string rawData)
-    {
-        using var sha256 = SHA256.Create();
-        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
-        return BitConverter.ToString(bytes).Replace("-", "", StringComparison.Ordinal).ToLowerInvariant();
+        // Return all response data as dictionary
+        return vnpay.GetAllResponseData();
     }
 }
