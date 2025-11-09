@@ -127,7 +127,7 @@ public class PaymentService : IPaymentService
             var returnUrl = dto.ReturnUrl ?? "http://localhost:3000/booking/payment/return";
             paymentUrl = _vnPayService.CreatePaymentUrl(
                 orderId: payment.Id.ToString(),
-                amount: booking.TotalAmountMinor / 100.0, // Convert from minor units to major units
+                amount: booking.TotalAmountMinor, // VNPay expects amount in VND (minor units)
                 orderDescription: $"Thanh toán đặt vé - Booking {booking.Code}",
                 ipAddress: clientIp,
                 returnUrl: returnUrl
