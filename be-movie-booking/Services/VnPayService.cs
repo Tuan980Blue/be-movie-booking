@@ -51,10 +51,11 @@ public class VnPayService : IVnPayService
 
     public string CreatePaymentUrl(string orderId, double amount, string orderDescription, string ipAddress, string returnUrl)
     {
-        // VNPay requires amount in VND as an integer
-        // The amount parameter is already in VND (e.g., 100000 for 100,000 VND)
-        // Convert to long integer
-        var vnp_Amount = (long)amount;
+        // VNPay requires amount to be multiplied by 100
+        // Example: 290,000 VND → vnp_Amount = 29,000,000
+        // The amount parameter is in VND (e.g., 290000 for 290,000 VND)
+        // VNPay needs: amount * 100
+        var vnp_Amount = (long)(amount * 100);
 
         // Use VnPayLibrary to build payment URL
         var vnpay = new VnPayLibrary();
