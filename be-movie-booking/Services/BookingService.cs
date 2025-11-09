@@ -1,6 +1,8 @@
 ﻿using be_movie_booking.DTOs;
 using be_movie_booking.Models;
 using be_movie_booking.Repositories;
+using be_movie_booking.Data;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace be_movie_booking.Services;
@@ -31,6 +33,7 @@ public class BookingService : IBookingService
     private readonly ISeatLockService _seatLockService;
     private readonly IPricingService _pricingService;
     private readonly IPaymentRepository _paymentRepository;
+    private readonly MovieBookingDbContext _dbContext;
 
     public BookingService(
         IUserService userService,
@@ -40,7 +43,8 @@ public class BookingService : IBookingService
         ISeatRepository seatRepository,
         ISeatLockService seatLockService,
         IPricingService pricingService,
-        IPaymentRepository paymentRepository)
+        IPaymentRepository paymentRepository,
+        MovieBookingDbContext dbContext)
     {
         _userService = userService;
         _bookingRepository = bookingRepository;
@@ -50,6 +54,7 @@ public class BookingService : IBookingService
         _seatLockService = seatLockService;
         _pricingService = pricingService;
         _paymentRepository = paymentRepository;
+        _dbContext = dbContext;
     }
 
     public async Task<BookingDraftResponseDto?> CreateAsync(CreateBookingDto dto, Guid? userId, CancellationToken ct = default)
@@ -278,23 +283,58 @@ public class BookingService : IBookingService
 
         booking.Tickets = tickets;
 
-        // Lưu vào database (confirmed booking) FIRST
-        // This ensures booking is persisted before unlocking seats
-        var confirmedBooking = await _bookingRepository.AddAsync(booking, ct);
-        
-        // Unlock seats AFTER booking is confirmed in database
-        // This prevents seats from being unlocked if database save fails
-        await _seatLockService.UnlockSeatsAsync(new SeatUnlockRequestDto
+        // Sử dụng transaction để đảm bảo atomicity: Payment update + Booking save
+        // PaymentService có thể đã update payment status, nhưng đảm bảo trong transaction này
+        // Nếu booking save fail, payment update cũng sẽ rollback
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+        try
         {
-            ShowtimeId = draft.ShowtimeId,
-            SeatIds = draft.SeatIds,
-            UserId = draft.UserId ?? Guid.Empty
-        });
-        
-        // Xóa draft khỏi Redis
-        await _bookingDraftRepository.DeleteAsync(bookingId, ct);
+            // 1. Update payment status nếu chưa succeeded (idempotent)
+            // Đảm bảo payment status được update trong cùng transaction với booking
+            // Nếu PaymentService đã update rồi, check này sẽ skip (an toàn)
+            if (payment.Status != PaymentStatus.Succeeded)
+            {
+                payment.Status = PaymentStatus.Succeeded;
+                payment.UpdatedAt = DateTime.UtcNow;
+                _dbContext.Payments.Update(payment);
+            }
 
-        return await MapToDtoAsync(confirmedBooking, ct);
+            // 2. Lưu booking vào database (bao gồm BookingItems và Tickets)
+            // Entity Framework sẽ tự động lưu tất cả related entities trong cùng transaction
+            await _dbContext.Bookings.AddAsync(booking, ct);
+            await _dbContext.SaveChangesAsync(ct);
+
+            // 3. Commit transaction - tất cả đã được lưu thành công
+            // Nếu có lỗi ở đây, tất cả sẽ rollback (payment update + booking save)
+            await transaction.CommitAsync(ct);
+
+            // 4. Unlock seats và xóa draft SAU KHI transaction commit thành công
+            // Nếu unlock/delete fail, booking đã được lưu nên không sao
+            try
+            {
+                await _seatLockService.UnlockSeatsAsync(new SeatUnlockRequestDto
+                {
+                    ShowtimeId = draft.ShowtimeId,
+                    SeatIds = draft.SeatIds,
+                    UserId = draft.UserId ?? Guid.Empty
+                });
+
+                await _bookingDraftRepository.DeleteAsync(bookingId, ct);
+            }
+            catch (Exception ex)
+            {
+                // Log nhưng không fail vì booking đã được lưu
+                Console.WriteLine($"Warning: Failed to unlock seats or delete draft after booking confirmation: {ex.Message}");
+            }
+
+            return await MapToDtoAsync(booking, ct);
+        }
+        catch (Exception)
+        {
+            // Rollback transaction nếu có lỗi
+            await transaction.RollbackAsync(ct);
+            throw; // Re-throw để caller biết có lỗi
+        }
     }
 
     public async Task<BookingResponseDto?> CancelAsync(Guid bookingId, string? reason, CancellationToken ct = default)

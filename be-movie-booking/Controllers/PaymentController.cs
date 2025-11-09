@@ -81,6 +81,7 @@ public class PaymentController : ControllerBase
         try
         {
             var payment = await _paymentService.ProcessVnPayReturnAsync(Request.Query, ct);
+         
             if (payment == null)
             {
                 return BadRequest(new { message = "Không tìm thấy payment" });

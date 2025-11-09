@@ -125,10 +125,14 @@ public class PaymentService : IPaymentService
         if (dto.Provider == PaymentProvider.VnPay)
         {
             var returnUrl = dto.ReturnUrl ?? "http://localhost:3000/booking/payment/return";
+            // Draft booking không có Code, sử dụng BookingId thay thế
+            var bookingIdentifier = string.IsNullOrEmpty(booking.Code) 
+                ? booking.Id.ToString() 
+                : booking.Code;
             paymentUrl = _vnPayService.CreatePaymentUrl(
                 orderId: payment.Id.ToString(),
                 amount: booking.TotalAmountMinor, // VNPay expects amount in VND (minor units)
-                orderDescription: $"Thanh toán đặt vé - Booking {booking.Code}",
+                orderDescription: $"Thanh toán đặt vé - Booking {bookingIdentifier}",
                 ipAddress: clientIp,
                 returnUrl: returnUrl
             );
@@ -173,17 +177,23 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Invalid VNPay response signature");
         }
 
+        //Dữ liệu trả về từ VNPay
         var responseData = _vnPayService.GetResponseData(query);
+        
         var vnp_TxnRef = responseData.GetValueOrDefault("vnp_TxnRef");
         var vnp_ResponseCode = responseData.GetValueOrDefault("vnp_ResponseCode");
         var vnp_TransactionNo = responseData.GetValueOrDefault("vnp_TransactionNo");
-
+        
+        //Lấy paymentId từ vnp_TxnRef
         if (string.IsNullOrEmpty(vnp_TxnRef) || !Guid.TryParse(vnp_TxnRef, out var paymentId))
         {
             throw new InvalidOperationException("Invalid payment ID in VNPay response");
         }
-
-        var payment = await _paymentRepository.GetByIdWithBookingAsync(paymentId, ct);
+        
+        // Không cần include Booking vì booking có thể chỉ tồn tại trong Redis (draft)
+        // Chỉ cần payment.BookingId để confirm booking sau
+        var payment = await _paymentRepository.GetByIdAsync(paymentId, ct);
+        
         if (payment == null)
         {
             throw new InvalidOperationException("Payment not found");
@@ -198,20 +208,6 @@ public class PaymentService : IPaymentService
             RawPayloadJson = JsonSerializer.Serialize(responseData),
             CreatedAt = DateTime.UtcNow
         }, ct);
-
-        // Update payment status based on response code
-        // VNPay response codes: 00 = Success, others = Failed
-        if (vnp_ResponseCode == "00")
-        {
-            payment.Status = PaymentStatus.Succeeded;
-            payment.ProviderTxnId = vnp_TransactionNo;
-        }
-        else
-        {
-            payment.Status = PaymentStatus.Failed;
-        }
-
-        payment = await _paymentRepository.UpdateAsync(payment, ct);
 
         return MapToDto(payment);
     }
@@ -234,7 +230,9 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Invalid payment ID in VNPay IPN");
         }
 
-        var payment = await _paymentRepository.GetByIdWithBookingAsync(paymentId, ct);
+        // Không cần include Booking vì booking có thể chỉ tồn tại trong Redis (draft)
+        // Chỉ cần payment.BookingId để confirm booking sau
+        var payment = await _paymentRepository.GetByIdAsync(paymentId, ct);
         if (payment == null)
         {
             throw new InvalidOperationException("Payment not found");

@@ -47,6 +47,7 @@ public class BookingController : ControllerBase
             {
                 return StatusCode(500, new { message = "Không thể tạo booking draft" });
             }
+
             return CreatedAtAction(nameof(GetById), new { id = draft.Id }, draft);
         }
         catch (ArgumentException ex)
@@ -60,125 +61,6 @@ public class BookingController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Có lỗi xảy ra khi tạo booking" });
-        }
-    }
-
-    /// <summary>
-    /// Lấy chi tiết booking theo ID
-    /// </summary>
-    [Authorize]
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById([FromRoute] Guid id)
-    {
-        try
-        {
-            var booking = await _bookingService.GetByIdAsync(id);
-            if (booking == null)
-            {
-                return NotFound();
-            }
-
-            // Check if user owns this booking or is admin
-            var sub = User?.Claims
-                          ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
-                          ?.Value
-                      ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
-                          ?.Value;
-            var userId = sub != null ? Guid.Parse(sub) : Guid.Empty;
-            var isAdmin = User?.IsInRole("Admin") ?? false;
-
-            if (booking.UserId != userId && !isAdmin)
-            {
-                return Forbid();
-            }
-
-            return Ok(booking);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy thông tin booking" });
-        }
-    }
-
-    /// <summary>
-    /// Lấy chi tiết booking theo mã booking
-    /// </summary>
-    [Authorize]
-    [HttpGet("code/{code}")]
-    public async Task<IActionResult> GetByCode([FromRoute] string code)
-    {
-        try
-        {
-            var booking = await _bookingService.GetByCodeAsync(code);
-            if (booking == null)
-            {
-                return NotFound();
-            }
-
-            // Check if user owns this booking or is admin
-            var sub = User?.Claims
-                          ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
-                          ?.Value
-                      ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
-                          ?.Value;
-            var userId = sub != null ? Guid.Parse(sub) : Guid.Empty;
-            var isAdmin = User?.IsInRole("Admin") ?? false;
-
-            if (booking.UserId != userId && !isAdmin)
-            {
-                return Forbid();
-            }
-
-            return Ok(booking);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy thông tin booking" });
-        }
-    }
-    
-    /// <summary>
-    /// Lấy danh sách booking nhẹ dành cho người dùng hiện tại (me)
-    /// </summary>
-    [Authorize]
-    [HttpGet("me")]
-    public async Task<IActionResult> ListMineLight([FromQuery] BookingSearchDto searchDto)
-    {
-        try
-        {
-            var sub = User?.Claims
-                          ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
-                          ?.Value
-                      ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
-                          ?.Value;
-            if (sub == null) return Unauthorized();
-            var userId = Guid.Parse(sub);
-
-            searchDto.UserId = userId;
-            var result = await _bookingService.ListAsync(searchDto);
-            return Ok(result);
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking (me)" });
-        }
-    }
-
-    /// <summary>
-    /// Lấy danh sách booking nhẹ cho admin (tất cả)
-    /// </summary>
-    [Authorize(Roles = "Admin")]
-    [HttpGet]
-    public async Task<IActionResult> ListAdminLight([FromQuery] BookingSearchDto searchDto)
-    {
-        try
-        {
-            var result = await _bookingService.ListAsync(searchDto);
-            return Ok(result);
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking (admin)" });
         }
     }
 
@@ -271,6 +153,125 @@ public class BookingController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Có lỗi xảy ra khi hủy booking" });
+        }
+    }
+
+    /// <summary>
+    /// Lấy chi tiết booking theo ID
+    /// </summary>
+    [Authorize]
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById([FromRoute] Guid id)
+    {
+        try
+        {
+            var booking = await _bookingService.GetByIdAsync(id);
+            if (booking == null)
+            {
+                return NotFound();
+            }
+
+            // Check if user owns this booking or is admin
+            var sub = User?.Claims
+                          ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
+                          ?.Value
+                      ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                          ?.Value;
+            var userId = sub != null ? Guid.Parse(sub) : Guid.Empty;
+            var isAdmin = User?.IsInRole("Admin") ?? false;
+
+            if (booking.UserId != userId && !isAdmin)
+            {
+                return Forbid();
+            }
+
+            return Ok(booking);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy thông tin booking" });
+        }
+    }
+
+    /// <summary>
+    /// Lấy chi tiết booking theo mã booking
+    /// </summary>
+    [Authorize]
+    [HttpGet("code/{code}")]
+    public async Task<IActionResult> GetByCode([FromRoute] string code)
+    {
+        try
+        {
+            var booking = await _bookingService.GetByCodeAsync(code);
+            if (booking == null)
+            {
+                return NotFound();
+            }
+
+            // Check if user owns this booking or is admin
+            var sub = User?.Claims
+                          ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
+                          ?.Value
+                      ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                          ?.Value;
+            var userId = sub != null ? Guid.Parse(sub) : Guid.Empty;
+            var isAdmin = User?.IsInRole("Admin") ?? false;
+
+            if (booking.UserId != userId && !isAdmin)
+            {
+                return Forbid();
+            }
+
+            return Ok(booking);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy thông tin booking" });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách booking nhẹ dành cho người dùng hiện tại (me)
+    /// </summary>
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> ListMineLight([FromQuery] BookingSearchDto searchDto)
+    {
+        try
+        {
+            var sub = User?.Claims
+                          ?.FirstOrDefault(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)
+                          ?.Value
+                      ?? User?.Claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)
+                          ?.Value;
+            if (sub == null) return Unauthorized();
+            var userId = Guid.Parse(sub);
+
+            searchDto.UserId = userId;
+            var result = await _bookingService.ListAsync(searchDto);
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking (me)" });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách booking nhẹ cho admin (tất cả)
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    public async Task<IActionResult> ListAdminLight([FromQuery] BookingSearchDto searchDto)
+    {
+        try
+        {
+            var result = await _bookingService.ListAsync(searchDto);
+            return Ok(result);
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách booking (admin)" });
         }
     }
 }
