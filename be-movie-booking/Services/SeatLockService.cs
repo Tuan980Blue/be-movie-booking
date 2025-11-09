@@ -19,7 +19,7 @@ public class SeatLockService : ISeatLockService
     private readonly ISeatLockRepository _repository;
     private readonly IHubContext<AppHub> _hubContext;
     private readonly TimeSpan _seatLockDuration = TimeSpan.FromMinutes(3);
-    private readonly TimeSpan _changeSeatLockPayment = TimeSpan.FromMinutes(5);
+    private readonly TimeSpan _changeSeatLockPayment = TimeSpan.FromMinutes(10); // Extended to match draft TTL when payment is created
 
     public SeatLockService(ISeatLockRepository repository, IHubContext<AppHub> hubContext)
     {

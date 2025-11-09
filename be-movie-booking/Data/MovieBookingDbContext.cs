@@ -173,8 +173,12 @@ public class MovieBookingDbContext : DbContext
         modelBuilder.Entity<Payment>(e =>
         {
             e.HasKey(x => x.Id);
-            e.HasOne(x => x.Booking).WithMany().HasForeignKey(x => x.BookingId);
+            // No foreign key constraint - Booking might only exist in Redis (draft)
+            // We validate BookingId existence at application level instead
+            // Navigation property is available for querying but no FK constraint is enforced
             e.HasIndex(x => new { x.BookingId, x.Status });
+            // Note: Navigation property 'Booking' exists but no FK relationship is configured
+            // This allows Payment to reference BookingId even if Booking doesn't exist in DB yet
         });
         modelBuilder.Entity<PaymentEvent>(e =>
         {
