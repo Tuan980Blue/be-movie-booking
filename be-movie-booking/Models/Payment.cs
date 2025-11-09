@@ -22,20 +22,20 @@ public class Payment
 {
     public Guid Id { get; set; }
     public Guid BookingId { get; set; }
-    public Booking Booking { get; set; } = null!;
-
+    public Booking? Booking { get; set; }
+    
     public PaymentProvider Provider { get; set; }
     public int AmountMinor { get; set; }
     public string Currency { get; set; } = "VND";
     public PaymentStatus Status { get; set; } = PaymentStatus.Initiated;
-
+    
     public string? ProviderTxnId { get; set; }
     public string? ReturnUrl { get; set; }
     public string? NotifyUrl { get; set; }
-
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
-
+    
     public ICollection<PaymentEvent> Events { get; set; } = new List<PaymentEvent>();
 }
 
@@ -44,8 +44,10 @@ public class PaymentEvent
     public Guid Id { get; set; }
     public Guid PaymentId { get; set; }
     public Payment Payment { get; set; } = null!;
-
-    public string EventType { get; set; } = null!;
+    
+    public string EventType { get; set; } = null!; // e.g., "created", "callback_received", "ipn_received", "status_changed"
     public string RawPayloadJson { get; set; } = null!;
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+

@@ -196,6 +196,11 @@ public class BookingController : ControllerBase
                 return BadRequest(ModelState);
             }
 
+            if (dto.PaymentId == Guid.Empty)
+            {
+                return BadRequest(new { message = "PaymentId không hợp lệ" });
+            }
+
             var booking = await _bookingService.ConfirmAsync(id, dto.PaymentId);
             if (booking == null)
             {

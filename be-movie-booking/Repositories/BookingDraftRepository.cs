@@ -13,6 +13,7 @@ public interface IBookingDraftRepository
     Task SaveAsync(BookingDraftDto draft, TimeSpan? ttl = null, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
+    Task<bool> ExtendTtlAsync(Guid id, TimeSpan ttl, CancellationToken ct = default);
 }
 
 public class BookingDraftRepository : IBookingDraftRepository
@@ -68,6 +69,21 @@ public class BookingDraftRepository : IBookingDraftRepository
     {
         var key = GetRedisKey(id);
         return await _db.KeyExistsAsync(key);
+    }
+
+    /// <summary>
+    /// Extends the TTL of an existing draft booking
+    /// </summary>
+    public async Task<bool> ExtendTtlAsync(Guid id, TimeSpan ttl, CancellationToken ct = default)
+    {
+        var key = GetRedisKey(id);
+        // Check if key exists first
+        if (!await _db.KeyExistsAsync(key))
+        {
+            return false;
+        }
+        // Extend TTL
+        return await _db.KeyExpireAsync(key, ttl);
     }
 }
 

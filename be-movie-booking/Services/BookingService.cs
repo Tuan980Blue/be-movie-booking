@@ -30,6 +30,7 @@ public class BookingService : IBookingService
     private readonly ISeatRepository _seatRepository;
     private readonly ISeatLockService _seatLockService;
     private readonly IPricingService _pricingService;
+    private readonly IPaymentRepository _paymentRepository;
 
     public BookingService(
         IUserService userService,
@@ -38,7 +39,8 @@ public class BookingService : IBookingService
         IShowtimeRepository showtimeRepository,
         ISeatRepository seatRepository,
         ISeatLockService seatLockService,
-        IPricingService pricingService)
+        IPricingService pricingService,
+        IPaymentRepository paymentRepository)
     {
         _userService = userService;
         _bookingRepository = bookingRepository;
@@ -47,6 +49,7 @@ public class BookingService : IBookingService
         _seatRepository = seatRepository;
         _seatLockService = seatLockService;
         _pricingService = pricingService;
+        _paymentRepository = paymentRepository;
     }
 
     public async Task<BookingDraftResponseDto?> CreateAsync(CreateBookingDto dto, Guid? userId, CancellationToken ct = default)
@@ -186,6 +189,23 @@ public class BookingService : IBookingService
 
     public async Task<BookingResponseDto?> ConfirmAsync(Guid bookingId, Guid paymentId, CancellationToken ct = default)
     {
+        // Validate payment exists and is successful
+        var payment = await _paymentRepository.GetByIdAsync(paymentId, ct);
+        if (payment == null)
+        {
+            throw new InvalidOperationException($"Payment với ID {paymentId} không tồn tại");
+        }
+
+        if (payment.BookingId != bookingId)
+        {
+            throw new InvalidOperationException($"Payment không thuộc về booking {bookingId}");
+        }
+
+        if (payment.Status != PaymentStatus.Succeeded)
+        {
+            throw new InvalidOperationException($"Payment chưa thành công. Trạng thái hiện tại: {payment.Status}");
+        }
+
         // Lấy draft từ Redis
         var draft = await _bookingDraftRepository.GetByIdAsync(bookingId, ct);
         if (draft == null)
@@ -196,12 +216,15 @@ public class BookingService : IBookingService
             {
                 if (existingBooking.Status == BookingStatus.Confirmed)
                 {
-                    Console.WriteLine("Booking đã được xác nhận trước đó");
+                    Console.WriteLine($"Booking {bookingId} đã được xác nhận trước đó");
                     return await MapToDtoAsync(existingBooking, ct);
                 }
                 throw new InvalidOperationException($"Booking không ở trạng thái Pending. Trạng thái hiện tại: {existingBooking.Status}");
             }
-            return null;
+            
+            // Draft không tồn tại và booking cũng không có trong database
+            // Có thể draft đã hết hạn hoặc chưa được tạo
+            throw new InvalidOperationException($"Không tìm thấy booking draft với ID {bookingId}. Draft có thể đã hết hạn hoặc chưa được tạo.");
         }
 
         // Generate unique booking code
@@ -255,16 +278,18 @@ public class BookingService : IBookingService
 
         booking.Tickets = tickets;
 
-        // Unlock seats
+        // Lưu vào database (confirmed booking) FIRST
+        // This ensures booking is persisted before unlocking seats
+        var confirmedBooking = await _bookingRepository.AddAsync(booking, ct);
+        
+        // Unlock seats AFTER booking is confirmed in database
+        // This prevents seats from being unlocked if database save fails
         await _seatLockService.UnlockSeatsAsync(new SeatUnlockRequestDto
         {
             ShowtimeId = draft.ShowtimeId,
             SeatIds = draft.SeatIds,
             UserId = draft.UserId ?? Guid.Empty
         });
-
-        // Lưu vào database (confirmed booking)
-        var confirmedBooking = await _bookingRepository.AddAsync(booking, ct);
         
         // Xóa draft khỏi Redis
         await _bookingDraftRepository.DeleteAsync(bookingId, ct);
