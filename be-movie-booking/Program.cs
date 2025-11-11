@@ -34,7 +34,7 @@ Console.WriteLine("*****Connection string: " + connectionString);
 //
 // === REDIS ===
 //
-var redisConnection = builder.Configuration.GetValue<string>("Redis:Connection");
+var redisConnection = Environment.GetEnvironmentVariable("Redis__Connection");
 Console.WriteLine("*****Redis connection: " + redisConnection);
 //tạo một instance của IConnectionMultiplexer
 var redis = ConnectionMultiplexer.Connect(redisConnection);
