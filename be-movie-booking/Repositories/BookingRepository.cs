@@ -18,6 +18,7 @@ public interface IBookingRepository
     Task<Booking?> UpdateAsync(Booking booking, CancellationToken ct = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
     Task<bool> AreSeatsBookedAsync(Guid showtimeId, List<Guid> seatIds, CancellationToken ct = default);
+    Task<List<Guid>> GetBookedSeatIdsAsync(Guid showtimeId, CancellationToken ct = default);
     Task<string> GenerateUniqueBookingCodeAsync(CancellationToken ct = default);
     Task<string> GenerateUniqueTicketCodeAsync(CancellationToken ct = default);
 }
@@ -187,6 +188,21 @@ public class BookingRepository : IBookingRepository
             .ToListAsync(ct);
 
         return bookedSeats.Any();
+    }
+
+    public async Task<List<Guid>> GetBookedSeatIdsAsync(Guid showtimeId, CancellationToken ct = default)
+    {
+        // Lấy danh sách tất cả ghế đã được đặt (Confirmed) cho suất chiếu
+        var blockingStatuses = new[] { BookingItemStatus.Confirmed };
+
+        var bookedSeatIds = await _db.BookingItems
+            .Where(item => item.ShowtimeId == showtimeId
+                && blockingStatuses.Contains(item.Status))
+            .Select(item => item.SeatId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        return bookedSeatIds;
     }
 
     public async Task<string> GenerateUniqueBookingCodeAsync(CancellationToken ct = default)

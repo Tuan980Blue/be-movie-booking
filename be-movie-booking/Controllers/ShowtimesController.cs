@@ -1,5 +1,6 @@
 using be_movie_booking.DTOs;
 using be_movie_booking.Services;
+using be_movie_booking.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -16,11 +17,13 @@ public class ShowtimesController : ControllerBase
 {
     private readonly IShowtimeService _showtimeService;
     private readonly IHubContext<AppHub> _hubContext;
+    private readonly IBookingRepository _bookingRepository;
 
-    public ShowtimesController(IShowtimeService showtimeService, IHubContext<AppHub> hubContext)
+    public ShowtimesController(IShowtimeService showtimeService, IHubContext<AppHub> hubContext, IBookingRepository bookingRepository)
     {
         _showtimeService = showtimeService;
         _hubContext = hubContext;
+        _bookingRepository = bookingRepository;
     }
 
     /// <summary>
@@ -75,13 +78,35 @@ public class ShowtimesController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách ghế đã được đặt (Confirmed) theo suất chiếu
+    /// Lấy danh sách ID ghế đã được đặt (Confirmed) theo suất chiếu
     /// </summary>
     [HttpGet("{id}/booked-seats")]
-    // public async Task<IActionResult> GetBookedSeats([FromRoute] Guid id)
-    // {
-    //     
-    // }
+    public async Task<IActionResult> GetBookedSeats([FromRoute] Guid id)
+    {
+        try
+        {
+            // Validate showtime exists
+            var showtime = await _showtimeService.GetByIdAsync(id);
+            if (showtime == null)
+            {
+                return NotFound(new { message = "Suất chiếu không tồn tại" });
+            }
+
+            // Get booked seat IDs from BookingRepository
+            var bookedSeatIds = await _bookingRepository.GetBookedSeatIdsAsync(id);
+
+            return Ok(new
+            {
+                showtimeId = id,
+                bookedSeatIds = bookedSeatIds,
+                count = bookedSeatIds.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Có lỗi xảy ra khi lấy danh sách ghế đã đặt", error = ex.Message });
+        }
+    }
 
     /// <summary>
     /// Tạo suất chiếu mới (Admin/Manager only)
