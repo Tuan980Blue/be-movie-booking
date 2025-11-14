@@ -3,6 +3,7 @@ using be_movie_booking.Models;
 using be_movie_booking.Repositories;
 using be_movie_booking.Services;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace be_movie_booking.Services;
 
@@ -22,19 +23,22 @@ public class PaymentService : IPaymentService
     private readonly IBookingService _bookingService;
     private readonly IBookingDraftRepository _bookingDraftRepository;
     private readonly ISeatLockService _seatLockService;
+    private readonly IConfiguration _configuration;
 
     public PaymentService(
         IPaymentRepository paymentRepository,
         IVnPayService vnPayService,
         IBookingService bookingService,
         IBookingDraftRepository bookingDraftRepository,
-        ISeatLockService seatLockService)
+        ISeatLockService seatLockService,
+        IConfiguration configuration)
     {
         _paymentRepository = paymentRepository;
         _vnPayService = vnPayService;
         _bookingService = bookingService;
         _bookingDraftRepository = bookingDraftRepository;
         _seatLockService = seatLockService;
+        _configuration = configuration;
     }
 
     public async Task<PaymentResponseDto> CreatePaymentAsync(CreatePaymentDto dto, string clientIp, CancellationToken ct = default)
@@ -124,7 +128,11 @@ public class PaymentService : IPaymentService
         string? paymentUrl = null;
         if (dto.Provider == PaymentProvider.VnPay)
         {
-            var returnUrl = dto.ReturnUrl ?? "http://localhost:3000/booking/payment/return";
+            // Ưu tiên dùng returnUrl từ frontend, nếu không có thì dùng config
+            var returnUrl = dto.ReturnUrl 
+                ?? _configuration["VNPay:vnp_ReturnUrl"] 
+                ?? throw new InvalidOperationException("VNPay returnUrl is not configured");
+            
             // Draft booking không có Code, sử dụng BookingId thay thế
             var bookingIdentifier = string.IsNullOrEmpty(booking.Code) 
                 ? booking.Id.ToString() 
@@ -204,10 +212,46 @@ public class PaymentService : IPaymentService
         {
             Id = Guid.NewGuid(),
             PaymentId = payment.Id,
-            EventType = "callback_received",
+            EventType = "return_received",
             RawPayloadJson = JsonSerializer.Serialize(responseData),
             CreatedAt = DateTime.UtcNow
         }, ct);
+
+        var isSuccess = vnp_ResponseCode == "00";
+        var shouldUpdate =
+            (isSuccess && payment.Status != PaymentStatus.Succeeded) ||
+            (!isSuccess && payment.Status == PaymentStatus.Pending);
+
+        if (shouldUpdate)
+        {
+            if (isSuccess)
+            {
+                payment.Status = PaymentStatus.Succeeded;
+                payment.ProviderTxnId = vnp_TransactionNo;
+            }
+            else
+            {
+                payment.Status = PaymentStatus.Failed;
+            }
+
+            payment = await _paymentRepository.UpdateAsync(payment, ct);
+
+            if (isSuccess)
+            {
+                try
+                {
+                    await _bookingService.ConfirmAsync(payment.BookingId, payment.Id, ct);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.WriteLine($"Booking confirmation result (return): {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error confirming booking after VNPay return: {ex.Message}");
+                }
+            }
+        }
 
         return MapToDto(payment);
     }

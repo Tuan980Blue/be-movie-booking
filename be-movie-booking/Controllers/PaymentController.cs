@@ -10,10 +10,12 @@ namespace be_movie_booking.Controllers;
 public class PaymentController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
+    private readonly IConfiguration _configuration;
 
-    public PaymentController(IPaymentService paymentService)
+    public PaymentController(IPaymentService paymentService, IConfiguration configuration)
     {
         _paymentService = paymentService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -87,10 +89,25 @@ public class PaymentController : ControllerBase
                 return BadRequest(new { message = "Không tìm thấy payment" });
             }
 
-            // Redirect to frontend with payment status
-            var frontendUrl = payment.Status == Models.PaymentStatus.Succeeded
-                ? $"http://localhost:3000/booking/payment/success?paymentId={payment.Id}"
-                : $"http://localhost:3000/booking/payment/failed?paymentId={payment.Id}";
+            // Get frontend base URL from configuration
+            var frontendBaseUrl = _configuration.GetValue<string>("Frontend:BaseUrl") 
+                ?? "http://localhost:3000";
+            
+            // Remove trailing slash if exists
+            frontendBaseUrl = frontendBaseUrl.TrimEnd('/');
+            
+            // Redirect to frontend with payment status (using Next.js dynamic route [status])
+            string statusPath = payment.Status switch
+            {
+                Models.PaymentStatus.Succeeded => "success",
+                Models.PaymentStatus.Pending => "pending",
+                _ => "failed"
+            };
+            
+            // Include bookingId in redirect URL so frontend can load booking immediately
+            string frontendUrl = payment.BookingId != Guid.Empty
+                ? $"{frontendBaseUrl}/booking/payment/{statusPath}?paymentId={payment.Id}&bookingId={payment.BookingId}"
+                : $"{frontendBaseUrl}/booking/payment/{statusPath}?paymentId={payment.Id}";
 
             return Redirect(frontendUrl);
         }
