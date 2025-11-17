@@ -12,6 +12,7 @@ public interface IGenreService
     Task<List<GenreReadDto>> ListAsync(CancellationToken ct = default);
     Task<GenreReadDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<GenreReadDto?> CreateAsync(CreateGenreDto dto, CancellationToken ct = default);
+    Task<List<GenreReadDto>> CreateBulkAsync(CreateGenresDto dto, CancellationToken ct = default);
     Task<GenreReadDto?> UpdateAsync(Guid id, UpdateGenreDto dto, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
 }
@@ -57,6 +58,47 @@ public class GenreService : IGenreService
 
         var createdGenre = await _genreRepository.AddAsync(genre, ct);
         return createdGenre == null ? null : MapToReadDto(createdGenre);
+    }
+
+    public async Task<List<GenreReadDto>> CreateBulkAsync(CreateGenresDto dto, CancellationToken ct = default)
+    {
+        // Check for duplicates within the input list
+        var duplicateNames = dto.Genres
+            .GroupBy(g => g.Name.ToLower())
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateNames.Any())
+        {
+            throw new ArgumentException($"Có thể loại trùng lặp trong danh sách: {string.Join(", ", duplicateNames)}");
+        }
+
+        // Get all existing genre names
+        var existingGenres = await _genreRepository.ListAsync(ct);
+        var existingNames = existingGenres.Select(g => g.Name.ToLower()).ToHashSet();
+
+        // Check if any genre name already exists in database
+        var conflictingNames = dto.Genres
+            .Where(g => existingNames.Contains(g.Name.ToLower()))
+            .Select(g => g.Name)
+            .ToList();
+
+        if (conflictingNames.Any())
+        {
+            throw new ArgumentException($"Các thể loại sau đã tồn tại: {string.Join(", ", conflictingNames)}");
+        }
+
+        // Create genre entities
+        var genres = dto.Genres.Select(dtoItem => new Genre
+        {
+            Id = Guid.NewGuid(),
+            Name = dtoItem.Name
+        }).ToList();
+
+        // Add all genres at once
+        var createdGenres = await _genreRepository.AddRangeAsync(genres, ct);
+        return createdGenres.Select(MapToReadDto).ToList();
     }
 
     public async Task<GenreReadDto?> UpdateAsync(Guid id, UpdateGenreDto dto, CancellationToken ct = default)

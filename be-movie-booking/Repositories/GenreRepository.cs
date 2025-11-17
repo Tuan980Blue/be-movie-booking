@@ -12,6 +12,7 @@ public interface IGenreRepository
     Task<Genre?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<Genre>> ListAsync(CancellationToken ct = default);
     Task<Genre?> AddAsync(Genre genre, CancellationToken ct = default);
+    Task<List<Genre>> AddRangeAsync(List<Genre> genres, CancellationToken ct = default);
     Task<Genre?> UpdateAsync(Genre genre, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken ct = default);
@@ -51,6 +52,13 @@ public class GenreRepository : IGenreRepository
         await _db.Genres.AddAsync(genre, ct);
         await _db.SaveChangesAsync(ct);
         return genre;
+    }
+
+    public async Task<List<Genre>> AddRangeAsync(List<Genre> genres, CancellationToken ct = default)
+    {
+        await _db.Genres.AddRangeAsync(genres, ct);
+        await _db.SaveChangesAsync(ct);
+        return genres;
     }
 
     public async Task<Genre?> UpdateAsync(Genre genre, CancellationToken ct = default)

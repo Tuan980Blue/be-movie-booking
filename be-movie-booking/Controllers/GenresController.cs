@@ -62,7 +62,7 @@ public class GenresController : ControllerBase
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateGenreDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateGenresDto dto)
     {
         try
         {
@@ -71,13 +71,13 @@ public class GenresController : ControllerBase
                 return BadRequest(ModelState);
             }
 
-            var genre = await _genreService.CreateAsync(dto);
-            if (genre != null)
+            var genres = await _genreService.CreateBulkAsync(dto);
+            if (genres != null && genres.Any())
             {
-                //gửi thông báo real-time về việc genres đã được cập nhật(chỉ gửi group)
+                // Gửi thông báo real-time về việc genres đã được cập nhật
                 await _hubContext.Clients.Group("genres").SendAsync("genres_updated");
             }
-            return genre == null ? BadRequest() : CreatedAtAction(nameof(GetById), new { id = genre.Id }, genre);
+            return genres == null || !genres.Any() ? BadRequest() : Ok(genres);
         }
         catch (ArgumentException ex)
         {
