@@ -31,3 +31,13 @@ public class UpdateGenreDto
     [StringLength(50, ErrorMessage = "Tên thể loại không được vượt quá 50 ký tự")]
     public string Name { get; set; } = null!;
 }
+
+/// <summary>
+/// DTO để tạo nhiều thể loại cùng lúc
+/// </summary>
+public class CreateGenresDto
+{
+    [Required(ErrorMessage = "Danh sách thể loại là bắt buộc")]
+    [MinLength(1, ErrorMessage = "Danh sách thể loại phải có ít nhất 1 phần tử")]
+    public List<CreateGenreDto> Genres { get; set; } = new();
+}
