@@ -34,14 +34,49 @@ Console.WriteLine("*****Connection string: " + connectionString);
 //
 // === REDIS ===
 //
-var redisConnection = Environment.GetEnvironmentVariable("Redis__Connection");
-Console.WriteLine("*****Redis connection: " + redisConnection);
-//tạo một instance của IConnectionMultiplexer
-var redis = ConnectionMultiplexer.Connect(redisConnection);
-//Nếu kết nối lỗi, nó sẽ ném ra một ngoại lệ
-Console.WriteLine($"Connected to Redis server at {redisConnection}");
-// Đăng ký IConnectionMultiplexer trong DI container
-builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    // Đọc đúng key config (Redis__Connection)
+    var raw = Environment.GetEnvironmentVariable("Redis__Connection");
+
+    Console.WriteLine("***** Redis raw value: " + raw);
+    
+    if (string.IsNullOrWhiteSpace(raw))
+    {
+        throw new InvalidOperationException("Redis__Connection is not configured.");
+    }
+
+    if (raw.StartsWith("redis://", StringComparison.OrdinalIgnoreCase) ||
+        raw.StartsWith("rediss://", StringComparison.OrdinalIgnoreCase))
+    {
+        var uri = new Uri(raw);
+        var userInfo = uri.UserInfo?.Split(':', 2) ?? Array.Empty<string>();
+        var user = userInfo.Length > 0 ? userInfo[0] : null;
+        var password = userInfo.Length > 1 ? userInfo[1] : null;
+
+        var options = new ConfigurationOptions
+        {
+            Ssl = uri.Scheme.Equals("rediss", StringComparison.OrdinalIgnoreCase),
+            AbortOnConnectFail = false
+        };
+        options.EndPoints.Add(uri.Host, uri.IsDefaultPort ? 6379 : uri.Port);
+        if (!string.IsNullOrEmpty(user))
+        {
+            options.User = user;
+        }
+        if (!string.IsNullOrEmpty(password))
+        {
+            options.Password = password;
+        }
+
+        Console.WriteLine("***** Connecting to Redis via URL at " + uri.Host + ":" + (uri.IsDefaultPort ? 6379 : uri.Port));
+        return ConnectionMultiplexer.Connect(options);
+    }
+
+    // Case 2: Redis local (docker-compose)
+    Console.WriteLine("***** Connecting to local Redis at " + raw);
+    return ConnectionMultiplexer.Connect(raw);
+});
 
 //
 // === CORS ===
