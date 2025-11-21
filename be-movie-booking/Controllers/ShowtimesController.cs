@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using be_movie_booking.Hubs;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace be_movie_booking.Controllers;
 
@@ -18,12 +20,31 @@ public class ShowtimesController : ControllerBase
     private readonly IShowtimeService _showtimeService;
     private readonly IHubContext<AppHub> _hubContext;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IDatabase _redis;
 
-    public ShowtimesController(IShowtimeService showtimeService, IHubContext<AppHub> hubContext, IBookingRepository bookingRepository)
+    public ShowtimesController(IShowtimeService showtimeService, IHubContext<AppHub> hubContext, IBookingRepository bookingRepository, IConnectionMultiplexer redis)
     {
         _showtimeService = showtimeService;
         _hubContext = hubContext;
         _bookingRepository = bookingRepository;
+        _redis = redis.GetDatabase();
+    }
+
+    /// <summary>
+    /// Xóa cache showtimes theo movieId
+    /// </summary>
+    private async Task InvalidateShowtimesByMovieCacheAsync(Guid movieId)
+    {
+        try
+        {
+            var cacheKey = $"showtimes:movie:{movieId}";
+            await _redis.KeyDeleteAsync(cacheKey);
+            Console.WriteLine($"Invalidated showtimes cache for movie: {movieId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error invalidating showtimes cache: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -68,7 +89,28 @@ public class ShowtimesController : ControllerBase
     {
         try
         {
+            var cacheKey = $"showtimes:movie:{movieId}";
+            
+            // Kiểm tra cache trong Redis
+            var cachedResult = await _redis.StringGetAsync(cacheKey);
+            if (cachedResult.HasValue)
+            {
+                var cachedShowtimes = JsonSerializer.Deserialize<List<ShowtimeReadDto>>(cachedResult);
+                if (cachedShowtimes != null)
+                {
+                    Console.WriteLine($"Retrieved showtimes by movie from Redis cache with movieId: {movieId}");
+                    return Ok(cachedShowtimes);
+                }
+            }
+
+            // Nếu không có cache, lấy từ database
             var showtimes = await _showtimeService.ListByMovieIdAsync(movieId);
+            
+            // Lưu vào cache với TTL 10 phút
+            var resultBytes = JsonSerializer.SerializeToUtf8Bytes(showtimes);
+            await _redis.StringSetAsync(cacheKey, resultBytes, TimeSpan.FromMinutes(10));
+            Console.WriteLine($"Stored showtimes by movie in Redis cache with movieId: {movieId}");
+            
             return Ok(showtimes);
         }
         catch (Exception ex)
@@ -92,8 +134,32 @@ public class ShowtimesController : ControllerBase
                 return NotFound(new { message = "Suất chiếu không tồn tại" });
             }
 
-            // Get booked seat IDs from BookingRepository
+            var cacheKey = $"showtimes:booked-seats:{id}";
+            
+            // Kiểm tra cache trong Redis
+            var cachedResult = await _redis.StringGetAsync(cacheKey);
+            if (cachedResult.HasValue)
+            {
+                var cachedData = JsonSerializer.Deserialize<List<Guid>>(cachedResult);
+                if (cachedData != null)
+                {
+                    Console.WriteLine($"Retrieved booked seats from Redis cache with showtimeId: {id}");
+                    return Ok(new
+                    {
+                        showtimeId = id,
+                        bookedSeatIds = cachedData,
+                        count = cachedData.Count
+                    });
+                }
+            }
+
+            // Nếu không có cache, lấy từ database
             var bookedSeatIds = await _bookingRepository.GetBookedSeatIdsAsync(id);
+
+            // Lưu vào cache với TTL 2 phút (dữ liệu thay đổi thường xuyên khi có booking)
+            var resultBytes = JsonSerializer.SerializeToUtf8Bytes(bookedSeatIds);
+            await _redis.StringSetAsync(cacheKey, resultBytes, TimeSpan.FromMinutes(2));
+            Console.WriteLine($"Stored booked seats in Redis cache with showtimeId: {id}");
 
             return Ok(new
             {
@@ -125,6 +191,8 @@ public class ShowtimesController : ControllerBase
             var showtime = await _showtimeService.CreateAsync(dto);
             if (showtime != null)
             {
+                // Xóa cache khi có thay đổi
+                await InvalidateShowtimesByMovieCacheAsync(showtime.MovieId);
                 // Gửi thông báo real-time về việc showtimes đã được cập nhật
                 await _hubContext.Clients.Group("showtimes").SendAsync("showtimes_updated", showtime.CinemaId, showtime.MovieId);
             }
@@ -161,6 +229,8 @@ public class ShowtimesController : ControllerBase
             var showtime = await _showtimeService.UpdateAsync(id, dto);
             if (showtime != null)
             {
+                // Xóa cache khi có thay đổi
+                await InvalidateShowtimesByMovieCacheAsync(showtime.MovieId);
                 // Gửi thông báo real-time về việc showtimes đã được cập nhật
                 await _hubContext.Clients.Group("showtimes").SendAsync("showtimes_updated", showtime.CinemaId, showtime.MovieId);
             }
@@ -189,9 +259,18 @@ public class ShowtimesController : ControllerBase
     {
         try
         {
+            // Lấy thông tin showtime trước khi xóa để biết movieId
+            var showtimeBeforeDelete = await _showtimeService.GetByIdAsync(id);
+            var movieId = showtimeBeforeDelete?.MovieId ?? Guid.Empty;
+            
             var result = await _showtimeService.DeleteAsync(id);
             if (result)
             {
+                // Xóa cache khi có thay đổi
+                if (movieId != Guid.Empty)
+                {
+                    await InvalidateShowtimesByMovieCacheAsync(movieId);
+                }
                 // Gửi thông báo real-time về việc showtimes đã được cập nhật
                 await _hubContext.Clients.Group("showtimes").SendAsync("showtimes_updated", 0, Guid.Empty);
             }

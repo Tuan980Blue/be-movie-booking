@@ -2,6 +2,7 @@
 using be_movie_booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 
 namespace be_movie_booking.Controllers;
 
@@ -13,10 +14,29 @@ namespace be_movie_booking.Controllers;
 public class BookingController : ControllerBase
 {
     private readonly IBookingService _bookingService;
+    private readonly IDatabase _redis;
 
-    public BookingController(IBookingService bookingService)
+    public BookingController(IBookingService bookingService, IConnectionMultiplexer redis)
     {
         _bookingService = bookingService;
+        _redis = redis.GetDatabase();
+    }
+
+    /// <summary>
+    /// Xóa cache booked seats theo showtimeId
+    /// </summary>
+    private async Task InvalidateBookedSeatsCacheAsync(Guid showtimeId)
+    {
+        try
+        {
+            var cacheKey = $"showtimes:booked-seats:{showtimeId}";
+            await _redis.KeyDeleteAsync(cacheKey);
+            Console.WriteLine($"Invalidated booked seats cache for showtime: {showtimeId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error invalidating booked seats cache: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -103,6 +123,13 @@ public class BookingController : ControllerBase
                 return Forbid();
             }
 
+            // Xóa cache booked seats khi booking được confirm
+            if (booking.Items != null && booking.Items.Any())
+            {
+                var showtimeId = booking.Items.First().ShowtimeId;
+                await InvalidateBookedSeatsCacheAsync(showtimeId);
+            }
+
             return Ok(booking);
         }
         catch (InvalidOperationException ex)
@@ -127,6 +154,8 @@ public class BookingController : ControllerBase
             var booking = await _bookingService.CancelAsync(id, dto?.Reason);
             if (booking == null)
             {
+                // Nếu là draft booking, booking sẽ null (draft đã bị xóa)
+                // Draft booking chưa confirm nên không ảnh hưởng đến booked seats cache
                 return NotFound();
             }
 
@@ -142,6 +171,13 @@ public class BookingController : ControllerBase
             if (booking.UserId != userId && !isAdmin)
             {
                 return Forbid();
+            }
+
+            // Xóa cache booked seats khi confirmed booking bị cancel
+            if (booking.Items != null && booking.Items.Any())
+            {
+                var showtimeId = booking.Items.First().ShowtimeId;
+                await InvalidateBookedSeatsCacheAsync(showtimeId);
             }
 
             return Ok(booking);
