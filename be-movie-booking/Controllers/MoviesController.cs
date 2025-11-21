@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using be_movie_booking.Hubs;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace be_movie_booking.Controllers;
 
@@ -16,11 +18,75 @@ public class MoviesController : ControllerBase
 {
     private readonly IMovieService _movieService;
     private readonly IHubContext<AppHub> _hubContext;
+    private readonly IDatabase _redis;
 
-    public MoviesController(IMovieService movieService, IHubContext<AppHub> hubContext)
+    public MoviesController(IMovieService movieService, IHubContext<AppHub> hubContext, IConnectionMultiplexer redis)
     {
         _movieService = movieService;
         _hubContext = hubContext;
+        _redis = redis.GetDatabase();
+    }
+
+    /// <summary>
+    /// Tạo cache key từ MovieSearchDto
+    /// </summary>
+    private static string GetCacheKey(MovieSearchDto searchDto)
+    {
+        var parts = new List<string> { "movies:list" };
+        
+        if (!string.IsNullOrWhiteSpace(searchDto.Search))
+            parts.Add($"search:{searchDto.Search.Trim().ToLower()}");
+        
+        if (searchDto.GenreIds != null && searchDto.GenreIds.Any())
+            parts.Add($"genres:{string.Join(",", searchDto.GenreIds.OrderBy(g => g))}");
+        
+        if (searchDto.Status.HasValue)
+            parts.Add($"status:{searchDto.Status.Value}");
+        
+        if (searchDto.ReleaseYear.HasValue)
+            parts.Add($"year:{searchDto.ReleaseYear.Value}");
+        
+        if (searchDto.ReleaseDateFrom.HasValue)
+            parts.Add($"from:{searchDto.ReleaseDateFrom.Value:yyyy-MM-dd}");
+        
+        if (searchDto.ReleaseDateTo.HasValue)
+            parts.Add($"to:{searchDto.ReleaseDateTo.Value:yyyy-MM-dd}");
+        
+        parts.Add($"page:{searchDto.Page}");
+        parts.Add($"pageSize:{searchDto.PageSize}");
+        parts.Add($"sortBy:{searchDto.SortBy}");
+        parts.Add($"sortDir:{searchDto.SortDirection}");
+        
+        return string.Join(":", parts);
+    }
+
+    /// <summary>
+    /// Xóa tất cả cache liên quan đến movies list
+    /// </summary>
+    private async Task InvalidateMoviesCacheAsync()
+    {
+        try
+        {
+            var server = _redis.Multiplexer.GetServer(_redis.Multiplexer.GetEndPoints().First());
+            
+            // Xóa tất cả keys bắt đầu bằng "movies:list"
+            await foreach (var key in server.KeysAsync(pattern: "movies:list:*"))
+            {
+                await _redis.KeyDeleteAsync(key);
+            }
+            
+            // Xóa cache của GetByStatus
+            await foreach (var key in server.KeysAsync(pattern: "movies:status:*"))
+            {
+                await _redis.KeyDeleteAsync(key);
+            }
+            
+            Console.WriteLine("Invalidated movies cache.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error invalidating movies cache: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -31,7 +97,29 @@ public class MoviesController : ControllerBase
     {
         try
         {
+            // Tạo cache key từ search parameters
+            var cacheKey = GetCacheKey(searchDto);
+            
+            // Kiểm tra cache trong Redis
+            var cachedResult = await _redis.StringGetAsync(cacheKey);
+            if (cachedResult.HasValue)
+            {
+                var cachedData = JsonSerializer.Deserialize<PagedResult<MovieReadDto>>(cachedResult);
+                if (cachedData != null)
+                {
+                    Console.WriteLine($"Retrieved movies list from Redis cache with key: {cacheKey}");
+                    return Ok(cachedData);
+                }
+            }
+
+            // Nếu không có cache, lấy từ database
             var result = await _movieService.ListAsync(searchDto);
+            
+            // Lưu vào cache với TTL 10 phút
+            var resultBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            await _redis.StringSetAsync(cacheKey, resultBytes, TimeSpan.FromMinutes(10));
+            Console.WriteLine($"Stored movies list in Redis cache with key: {cacheKey}");
+            
             return Ok(result);
         }
         catch (Exception ex)
@@ -48,8 +136,30 @@ public class MoviesController : ControllerBase
     {
         try
         {
-            var movie = await _movieService.GetByIdAsync(id);
-            return movie == null ? NotFound() : Ok(movie);
+            var cacheKey = $"movies:detail:{id}";
+            
+            // Kiểm tra cache
+            var cachedMovie = await _redis.StringGetAsync(cacheKey);
+            if (cachedMovie.HasValue)
+            {
+                var movie = JsonSerializer.Deserialize<MovieReadDto>(cachedMovie);
+                if (movie != null)
+                {
+                    Console.WriteLine($"Retrieved movie detail from Redis cache with id: {id}");
+                    return Ok(movie);
+                }
+            }
+
+            // Lấy từ database
+            var result = await _movieService.GetByIdAsync(id);
+            if (result == null) return NotFound();
+
+            // Lưu vào cache với TTL 15 phút
+            var resultBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            await _redis.StringSetAsync(cacheKey, resultBytes, TimeSpan.FromMinutes(15));
+            Console.WriteLine($"Stored movie detail in Redis cache with id: {id}");
+
+            return Ok(result);
         }
         catch (Exception ex)
         {
@@ -74,6 +184,8 @@ public class MoviesController : ControllerBase
             var movie = await _movieService.CreateAsync(dto);
             if (movie != null)
             {
+                // Xóa cache khi có thay đổi
+                await InvalidateMoviesCacheAsync();
                 // Gửi thông báo real-time 
                 await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
             }
@@ -106,6 +218,10 @@ public class MoviesController : ControllerBase
             var movie = await _movieService.UpdateAsync(id, dto);
             if (movie != null)
             {
+                // Xóa cache khi có thay đổi
+                await InvalidateMoviesCacheAsync();
+                // Xóa cache chi tiết phim
+                await _redis.KeyDeleteAsync($"movies:detail:{id}");
                 // Gửi thông báo real-time về việc movies đã được cập nhật
                 await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
             }
@@ -133,6 +249,10 @@ public class MoviesController : ControllerBase
             var result = await _movieService.DeleteAsync(id);
             if (result)
             {
+                // Xóa cache khi có thay đổi
+                await InvalidateMoviesCacheAsync();
+                // Xóa cache chi tiết phim
+                await _redis.KeyDeleteAsync($"movies:detail:{id}");
                 // Gửi thông báo real-time về việc movies đã được cập nhật
                 await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
             }
@@ -161,6 +281,10 @@ public class MoviesController : ControllerBase
             var movie = await _movieService.ChangeStatusAsync(id, dto);
             if (movie != null)
             {
+                // Xóa cache khi có thay đổi
+                await InvalidateMoviesCacheAsync();
+                // Xóa cache chi tiết phim
+                await _redis.KeyDeleteAsync($"movies:detail:{id}");
                 // Gửi thông báo real-time về việc movies đã được cập nhật
                 await _hubContext.Clients.Group("movies").SendAsync("movies_updated");
             }
@@ -184,8 +308,29 @@ public class MoviesController : ControllerBase
     {
         try
         {
-            var movies = await _movieService.GetByStatusAsync(status);
-            return Ok(movies);
+            var cacheKey = $"movies:status:{status.ToLower()}";
+            
+            // Kiểm tra cache
+            var cachedMovies = await _redis.StringGetAsync(cacheKey);
+            if (cachedMovies.HasValue)
+            {
+                var movies = JsonSerializer.Deserialize<List<MovieReadDto>>(cachedMovies);
+                if (movies != null)
+                {
+                    Console.WriteLine($"Retrieved movies by status from Redis cache: {status}");
+                    return Ok(movies);
+                }
+            }
+
+            // Lấy từ database
+            var result = await _movieService.GetByStatusAsync(status);
+            
+            // Lưu vào cache với TTL 10 phút
+            var resultBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            await _redis.StringSetAsync(cacheKey, resultBytes, TimeSpan.FromMinutes(10));
+            Console.WriteLine($"Stored movies by status in Redis cache: {status}");
+
+            return Ok(result);
         }
         catch (ArgumentException ex)
         {

@@ -2,6 +2,8 @@ using be_movie_booking.DTOs;
 using be_movie_booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace be_movie_booking.Controllers;
 
@@ -14,11 +16,30 @@ public class SeatsController : ControllerBase
 {
     private readonly ISeatService _seatService;
     private readonly IRoomService _roomService;
+    private readonly IDatabase _redis;
 
-    public SeatsController(ISeatService seatService, IRoomService roomService)
+    public SeatsController(ISeatService seatService, IRoomService roomService, IConnectionMultiplexer redis)
     {
         _seatService = seatService;
         _roomService = roomService;
+        _redis = redis.GetDatabase();
+    }
+
+    /// <summary>
+    /// Xóa cache layout ghế ngồi của phòng
+    /// </summary>
+    private async Task InvalidateSeatLayoutCacheAsync(Guid roomId)
+    {
+        try
+        {
+            var cacheKey = $"seats:layout:{roomId}";
+            await _redis.KeyDeleteAsync(cacheKey);
+            Console.WriteLine($"Invalidated seat layout cache for room: {roomId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error invalidating seat layout cache: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -50,7 +71,29 @@ public class SeatsController : ControllerBase
         {
             var room = await _roomService.GetByIdAsync(roomId);
             if (room == null || room.CinemaId != cinemaId) return NotFound(new { message = "Room not found in this cinema" });
+            
+            var cacheKey = $"seats:layout:{roomId}";
+            
+            // Kiểm tra cache trong Redis
+            var cachedResult = await _redis.StringGetAsync(cacheKey);
+            if (cachedResult.HasValue)
+            {
+                var cachedLayout = JsonSerializer.Deserialize<SeatLayoutDto>(cachedResult);
+                if (cachedLayout != null)
+                {
+                    Console.WriteLine($"Retrieved seat layout from Redis cache with roomId: {roomId}");
+                    return Ok(cachedLayout);
+                }
+            }
+
+            // Nếu không có cache, lấy từ database
             var layout = await _seatService.GetSeatLayoutAsync(roomId);
+            
+            // Lưu vào cache với TTL 30 phút (layout ít thay đổi)
+            var resultBytes = JsonSerializer.SerializeToUtf8Bytes(layout);
+            await _redis.StringSetAsync(cacheKey, resultBytes, TimeSpan.FromMinutes(30));
+            Console.WriteLine($"Stored seat layout in Redis cache with roomId: {roomId}");
+            
             return Ok(layout);
         }
         catch (ArgumentException ex)
@@ -158,6 +201,11 @@ public class SeatsController : ControllerBase
             var room = await _roomService.GetByIdAsync(roomId);
             if (room == null || room.CinemaId != cinemaId) return NotFound(new { message = "Room not found in this cinema" });
             var seat = await _seatService.CreateAsync(roomId, dto);
+            if (seat != null)
+            {
+                // Xóa cache layout khi có thay đổi
+                await InvalidateSeatLayoutCacheAsync(roomId);
+            }
             return seat == null ? BadRequest() : CreatedAtAction(nameof(GetById), new { cinemaId, roomId, id = seat.Id }, seat);
         }
         catch (ArgumentException ex)
@@ -191,6 +239,11 @@ public class SeatsController : ControllerBase
             var room = await _roomService.GetByIdAsync(roomId);
             if (room == null || room.CinemaId != cinemaId) return NotFound(new { message = "Room not found in this cinema" });
             var seats = await _seatService.CreateBulkLayoutAsync(roomId, dto);
+            if (seats != null && seats.Any())
+            {
+                // Xóa cache layout khi có thay đổi
+                await InvalidateSeatLayoutCacheAsync(roomId);
+            }
             return Ok(new { message = $"Đã tạo {seats.Count} ghế ngồi", seats });
         }
         catch (ArgumentException ex)
@@ -220,6 +273,11 @@ public class SeatsController : ControllerBase
             var room = await _roomService.GetByIdAsync(roomId);
             if (room == null || room.CinemaId != cinemaId) return NotFound(new { message = "Room not found in this cinema" });
             var seat = await _seatService.UpdateAsync(id, dto);
+            if (seat != null)
+            {
+                // Xóa cache layout khi có thay đổi
+                await InvalidateSeatLayoutCacheAsync(roomId);
+            }
             return seat == null ? NotFound() : Ok(seat);
         }
         catch (ArgumentException ex)
@@ -250,6 +308,11 @@ public class SeatsController : ControllerBase
             var room = await _roomService.GetByIdAsync(roomId);
             if (room == null || room.CinemaId != cinemaId) return NotFound(new { message = "Room not found in this cinema" });
             var result = await _seatService.DeleteAsync(id);
+            if (result)
+            {
+                // Xóa cache layout khi có thay đổi
+                await InvalidateSeatLayoutCacheAsync(roomId);
+            }
             return result ? NoContent() : NotFound();
         }
         catch (Exception ex)
@@ -270,6 +333,11 @@ public class SeatsController : ControllerBase
             var room = await _roomService.GetByIdAsync(roomId);
             if (room == null || room.CinemaId != cinemaId) return NotFound(new { message = "Room not found in this cinema" });
             var result = await _seatService.DeleteByRoomAsync(roomId);
+            if (result)
+            {
+                // Xóa cache layout khi có thay đổi
+                await InvalidateSeatLayoutCacheAsync(roomId);
+            }
             return result ? NoContent() : NotFound();
         }
         catch (Exception ex)
