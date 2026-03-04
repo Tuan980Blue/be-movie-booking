@@ -4,7 +4,7 @@
 
 # 🎬 Web Đặt Vé Xem Phim
 
-Một ứng dụng web cho phép người dùng tra cứu lịch chiếu, chọn ghế và đặt vé xem phim trực tuyến một cách nhanh chóng, tiện lợi.
+Một ứng dụng web cho phép người dùng tra cứu lịch chiếu phim, chọn ghế và đặt vé xem phim trực tuyến một cách nhanh chóng, tiện lợi.
 
 ## ✨ Tính năng
 
